@@ -136,13 +136,10 @@
       "Bash(grep -n \"label_outline\\\\|Icon\\(Icons.label\\\\|labelColor\\\\|TagChip\\\\|Container\\(\\\\s*$\" /Users/roarns/Documents/lumen_app/lib/widgets/subtask_list.dart)",
       "Bash(grep -n 'hasSubtasks\\\\|'\\\\''$done/$total'\\\\''\\\\|checklist\\\\|Icons\\\\.' lib/widgets/task_tile.dart)",
       "Bash(curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh -o /private/tmp/claude-501/-Users-roarns-Documents-lumen-app/73551b0f-a814-4cc1-ad5e-21d579d96735/scratchpad/install.sh)",
-      "Bash(bash /private/tmp/claude-501/-Users-roarns-Documents-lumen-app/73551b0f-a814-4cc1-ad5e-21d579d96735/scratchpad/install.sh)",
-      "Bash(rm -rf ~/Library/Developer/Xcode/DerivedData/Runner-efwbrvbzoyhjoxgbrbfmkebqfror && echo OK1)",
-      "Bash(flutter clean *)"
+      "Bash(bash /private/tmp/claude-501/-Users-roarns-Documents-lumen-app/73551b0f-a814-4cc1-ad5e-21d579d96735/scratchpad/install.sh)"
     ],
     "additionalDirectories": [
-      "/proc/10836/fd",
-      "/Users/roarns/Library/Developer/Xcode/DerivedData/Runner-efwbrvbzoyhjoxgbrbfmkebqfror"
+      "/proc/10836/fd"
     ]
   }
 }
