@@ -291,12 +291,28 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                         final newDone = !_subtasksDone[i];
                         setState(() => _subtasksDone[i] = newDone);
                         widget.onSubtaskToggled(i);
-                        supabase
-                            .from('subtasks')
-                            .update({'concluida': newDone})
-                            .eq('task_id', widget.task.id)
-                            .eq('ordem', i)
-                            .catchError((_) {});
+                        // CORRECAO-C-OLD: .eq('task_id', ...).eq('ordem', i) usava o
+                        // índice posicional na lista como se fosse a coluna 'ordem'
+                        // do banco — funciona só se 'ordem' for sempre sequencial e
+                        // sem furos. sub.id (agora disponível, ver fix no SELECT de
+                        // project_detail_screen.dart) é a chave correta.
+                        // supabase
+                        //     .from('subtasks')
+                        //     .update({'concluida': newDone})
+                        //     .eq('task_id', widget.task.id)
+                        //     .eq('ordem', i)
+                        //     .catchError((_) {});
+                        final sub = task.subtasks[i];
+                        if (sub.id != null) {
+                          supabase.from('subtasks').update({'concluida': newDone}).eq('id', sub.id!).catchError((_) {});
+                        } else {
+                          supabase
+                              .from('subtasks')
+                              .update({'concluida': newDone})
+                              .eq('task_id', widget.task.id)
+                              .eq('ordem', i)
+                              .catchError((_) {});
+                        }
                       },
                     ),
                   ),
@@ -428,16 +444,20 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
               spacing: 12,
               runSpacing: 4,
               children: [
-                ...task.labels.take(3).map((l) => TagChip(
-                      label: l.name,
-                      color: l.color,
-                    )),
+                // LABEL-CHIP-OLD: TagChip (radius 6, fontSize 12, com borda).
+                // ...task.labels.take(3).map((l) => TagChip(
+                //       label: l.name,
+                //       color: l.color,
+                //     )),
+                // if (task.labels.length > 3)
+                //   TagChip(
+                //     label: '+${task.labels.length - 3}',
+                //     color: AppColors.textTertiary,
+                //     showIcon: false,
+                //   ),
+                ...task.labels.take(3).map((l) => LabelChip(label: l.name, color: l.color)),
                 if (task.labels.length > 3)
-                  TagChip(
-                    label: '+${task.labels.length - 3}',
-                    color: AppColors.textTertiary,
-                    showIcon: false,
-                  ),
+                  LabelChip(label: '+${task.labels.length - 3}', color: AppColors.textTertiary),
               ],
             ),
           ),
@@ -748,11 +768,13 @@ class SubtaskList extends StatelessWidget {
       height: 18,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: done ? doneColor : priColor.withValues(alpha: 0.08),
+        // CIRCLE-DONE-OLD: color: done ? doneColor : priColor.withValues(alpha: 0.08),
+        color: done ? doneColor.withValues(alpha: 0.12) : priColor.withValues(alpha: 0.08),
         border: Border.all(color: done ? doneColor : priColor, width: 2),
       ),
+      // CIRCLE-DONE-OLD: child: done ? const Icon(Icons.check_rounded, size: 10, color: Colors.white) : null,
       child: done
-          ? const Icon(Icons.check_rounded, size: 10, color: Colors.white)
+          ? const Icon(Icons.check_rounded, size: 10, color: doneColor)
           : null,
     );
   }
@@ -825,10 +847,12 @@ class SubtaskList extends StatelessWidget {
       for (final id in sub.labelIds) {
         final option = projectLabels?.where((l) => l.id == id).firstOrNull;
         if (option != null) {
-          chips.add(_metaChip(option.color, option.name));
+          // LABEL-CHIP-OLD: chips.add(_metaChip(option.color, option.name));
+          chips.add(LabelChip(label: option.name, color: option.color));
         } else {
           // Nunca quebrar silenciosamente — fallback cinza com o id.
-          chips.add(_metaChip(AppColors.textTertiary, id));
+          // LABEL-CHIP-OLD: chips.add(_metaChip(AppColors.textTertiary, id));
+          chips.add(LabelChip(label: id, color: AppColors.textTertiary));
         }
       }
     }
@@ -936,11 +960,13 @@ class PriorityDot extends StatelessWidget {
       height: 20,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: done ? doneColor : _color.withValues(alpha: 0.12),
+        // CIRCLE-DONE-OLD: color: done ? doneColor : _color.withValues(alpha: 0.12),
+        color: done ? doneColor.withValues(alpha: 0.12) : _color.withValues(alpha: 0.12),
         border: Border.all(color: done ? doneColor : _color, width: 2.5),
       ),
+      // CIRCLE-DONE-OLD: child: done ? const Icon(Icons.check_rounded, size: 13, color: Colors.white) : null,
       child: done
-          ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+          ? const Icon(Icons.check_rounded, size: 13, color: doneColor)
           : null,
     );
   }
@@ -1095,5 +1121,47 @@ class TagChip extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: maxWidth!), child: chip);
     }
     return chip;
+  }
+}
+
+// LABEL-CHIP-OLD: chips de etiqueta espalhados em formatos divergentes
+// (TagChip: radius 6/fontSize 12/com borda; _metaChip: radius 8/dot 5x5/com
+// borda; _buildStandardChip em project_detail_screen.dart: já no padrão).
+// Padrão único para TODO chip de etiqueta (TaskLabel): pill 20, padding 7/3,
+// dot 6x6, fontSize 11/w500, sem borda.
+class LabelChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const LabelChip({super.key, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: color,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

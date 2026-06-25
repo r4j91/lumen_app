@@ -13,6 +13,9 @@ import '../theme/app_colors.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/swipeable_task_tile.dart';
+import '../widgets/task_detail/subtask_item.dart';
+import '../widgets/task_detail/sheets/subtask_detail_sheet.dart';
+import '../widgets/task_detail/sheets/task_labels_picker_sheet.dart' show LabelOption;
 import '../widgets/task_tile.dart';
 import 'quick_add_task_sheet.dart';
 import 'task_detail_sheet.dart';
@@ -118,8 +121,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       // sempre caía no default 0 no construtor manual de Task abaixo.
       // const tasksSelectWithSubtaskExtras = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids), task_labels(labels(id, nome, cor))';
       // const tasksSelectFallback = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor))';
-      const tasksSelectWithSubtaskExtras = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids), task_labels(labels(id, nome, cor)), task_comments(count)';
-      const tasksSelectFallback = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor)), task_comments(count)';
+      // CORRECAO-C-OLD: subquery subtasks(...) não pedia 'id' — o construtor
+      // manual de Subtask abaixo nunca tinha id/order reais, então o update
+      // de toggle usava .eq('ordem', sub.order) com order sempre 0 (default),
+      // acertando a subtarefa errada (ou nenhuma) quando havia mais de uma.
+      // const tasksSelectWithSubtaskExtras = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids), task_labels(labels(id, nome, cor)), task_comments(count)';
+      // const tasksSelectFallback = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor)), task_comments(count)';
+      const tasksSelectWithSubtaskExtras = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(id, titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids), task_labels(labels(id, nome, cor)), task_comments(count)';
+      const tasksSelectFallback = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(id, titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor)), task_comments(count)';
       List<Map<String, dynamic>> rows;
       try {
         rows = await supabase
@@ -215,6 +224,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           })(),
           labels: labels,
           subtasks: sub.map((s) => Subtask(
+            // CORRECAO-C: id/order nunca eram lidos aqui (defaults null/0),
+            // o que quebrava qualquer update keyed por id ou por ordem real.
+            id: s['id']?.toString(),
+            order: s['ordem'] as int? ?? 0,
             title: s['titulo'] as String,
             description: s['descricao'] as String?,
             done: s['concluida'] as bool? ?? false,
@@ -679,8 +692,78 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         _buildTaskListRowContent(task, done, subtaskDone, subtaskTotal, dateChip, expanded),
         if (expanded)
           for (var si = 0; si < task.subtasks.length; si++)
-            _buildTaskListSubtaskRow(task.subtasks[si]),
+            _buildTaskListSubtaskRow(task, task.subtasks[si]),
       ],
+    );
+  }
+
+  // SUBTASK-TAP-FIX: extraído do closure inline de TaskTile._buildBody
+  // (onToggle, linhas ~290-299), mesmo padrão otimista usado por
+  // _toggleDone/_toggleUndone nesta tela. Compartilhado pelos dois modos
+  // não é possível (TaskTile guarda estado privado _subtasksDone), então
+  // a lógica de persistência é replicada aqui, não duplicada de um método
+  // privado.
+  void _toggleSubtaskDone(Task task, Subtask sub) {
+    final taskIndex = _tasks.indexOf(task);
+    if (taskIndex == -1) return;
+    final subIndex = task.subtasks.indexOf(sub);
+    if (subIndex == -1) return;
+    final newDone = !sub.done;
+    final updatedSub = sub.copyWith(done: newDone);
+    final updatedSubtasks = List<Subtask>.from(task.subtasks);
+    updatedSubtasks[subIndex] = updatedSub;
+    final updatedTask = task.copyWith(subtasks: updatedSubtasks);
+    setState(() => _tasks[taskIndex] = updatedTask);
+    // CORRECAO-C-OLD: .eq('task_id', task.id).eq('ordem', sub.order) — ordem
+    // do construtor manual era sempre 0 (ver fix em _loadTasks), então isso
+    // atualizava a subtarefa errada quando havia mais de uma por tarefa.
+    // supabase
+    //     .from('subtasks')
+    //     .update({'concluida': newDone})
+    //     .eq('task_id', task.id)
+    //     .eq('ordem', sub.order)
+    //     .catchError((_) {
+    //   if (mounted) setState(() => _tasks[taskIndex] = task);
+    // });
+    if (sub.id != null) {
+      supabase.from('subtasks').update({'concluida': newDone}).eq('id', sub.id!).catchError((_) {
+        if (mounted) setState(() => _tasks[taskIndex] = task);
+      });
+    } else {
+      // Subtarefa sem id real (não deveria ocorrer após o fix do SELECT) —
+      // fallback ao comportamento antigo para não perder a gravação.
+      supabase
+          .from('subtasks')
+          .update({'concluida': newDone})
+          .eq('task_id', task.id)
+          .eq('ordem', sub.order)
+          .catchError((_) {
+        if (mounted) setState(() => _tasks[taskIndex] = task);
+      });
+    }
+  }
+
+  // SUBTASK-TAP-FIX: mesmo SubtaskDetailSheet do modo Balões
+  // (SubtaskList._openSubtaskDetail em task_tile.dart), via a função
+  // pública showSubtaskDetailSheet — reaproveitada, não duplicada.
+  void _openSubtaskDetail(Task task, Subtask sub) {
+    HapticService().lightImpact();
+    final item = SubtaskItem(
+      id: sub.id,
+      title: sub.title,
+      description: sub.description,
+      done: sub.done,
+      priority: sub.priority,
+      labelIds: sub.labelIds.toSet(),
+      dueDate: sub.dueDate,
+      valor: sub.valor,
+    );
+    showSubtaskDetailSheet(
+      context: context,
+      item: item,
+      labels: _allLabels.map((l) => LabelOption(l.id, l.name, l.color)).toList(),
+      parentTaskTitle: task.title,
+      onChanged: _loadTasks,
     );
   }
 
@@ -744,9 +827,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         child: Wrap(
                           spacing: 8,
                           runSpacing: 4,
+                          // LABEL-CHIP-OLD: TagChip (radius 6, fontSize 12, com borda).
+                          // children: task.labels
+                          //     .take(3)
+                          //     .map((l) => TagChip(label: l.name, color: l.color))
+                          //     .toList(),
                           children: task.labels
                               .take(3)
-                              .map((l) => TagChip(label: l.name, color: l.color))
+                              .map((l) => LabelChip(label: l.name, color: l.color))
                               .toList(),
                         ),
                       ),
@@ -812,46 +900,203 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
   // M5-EXPAND: linha de subtarefa indentada, exibida quando o id da
   // tarefa pai está em _expandedListIds.
-  Widget _buildTaskListSubtaskRow(Subtask sub) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(36, 8, 18, 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.015),
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.03), width: 0.5),
+  // SUBTASK-TAP-FIX: linha sem GestureDetector/InkWell antes — toque no
+  // checkbox ou na linha não fazia nada. Adicionados sem reescrever o
+  // layout existente.
+  Widget _buildTaskListSubtaskRow(Task task, Subtask sub) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => _openSubtaskDetail(task, sub), // SUBTASK-TAP-FIX
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(36, 8, 18, 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.015),
+          border: Border(
+            bottom: BorderSide(color: Colors.white.withValues(alpha: 0.03), width: 0.5),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _toggleSubtaskDone(task, sub), // SUBTASK-TAP-FIX
+              child: Container(
+                width: 18,
+                height: 18,
+                margin: const EdgeInsets.only(top: 1, right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  // CIRCLE-DONE-OLD: color: sub.done ? const Color(0xFF22C55E) : Colors.transparent,
+                  color: sub.done
+                      ? const Color(0xFF22C55E).withValues(alpha: 0.12)
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: sub.done ? const Color(0xFF22C55E) : Colors.white.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                // CIRCLE-DONE-OLD: child: sub.done ? const Icon(Icons.check_rounded, size: 10, color: Colors.white) : null,
+                child: sub.done
+                    ? const Icon(Icons.check_rounded, size: 10, color: Color(0xFF22C55E))
+                    : null,
+              ),
+            ),
+            // SUBTASK-LIST-OLD: apenas Text simples, sem descrição/metadados.
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    sub.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: sub.done ? 0.3 : 0.75),
+                      decoration: sub.done ? TextDecoration.lineThrough : TextDecoration.none,
+                      decorationColor: Colors.white.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  if (sub.description != null && sub.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        sub.description!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.35)),
+                      ),
+                    ),
+                  if (_buildSubtaskMeta(sub) != null)
+                    Padding(padding: const EdgeInsets.only(top: 4), child: _buildSubtaskMeta(sub)!),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  // CORREÇÃO B: metadados de subtarefa no modo lista (data + prioridade +
+  // etiquetas). Adaptado ao enum real do app: SubtaskPriority é
+  // {high, medium, low} (não p1-p4); Subtask não tem .labels, apenas
+  // .labelIds, resolvido via _allLabels; TagChip (já existente em
+  // task_tile.dart) é reaproveitado em vez de reimplementar o chip de
+  // etiqueta / fazer parse de hex (TaskLabel.color já é Color).
+  Widget? _buildSubtaskMeta(Subtask sub) {
+    final chips = <Widget>[];
+
+    if (sub.dueDate != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final due = DateTime(sub.dueDate!.year, sub.dueDate!.month, sub.dueDate!.day);
+      final diff = due.difference(today).inDays;
+      final Color color;
+      final String label;
+      if (diff == 0) {
+        color = const Color(0xFF7ECC49);
+        label = 'Hoje';
+      } else if (diff < 0) {
+        color = const Color(0xFFDC4C3E);
+        label = '${due.day} ${_ptMonths[due.month - 1]}';
+      } else {
+        color = const Color(0xFFF0A830);
+        label = '${due.day} ${_ptMonths[due.month - 1]}';
+      }
+      chips.add(Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(5)),
+        child: Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+      ));
+    }
+
+    // PRIORITY-CHIP-OLD: sem dot, texto 'Alta'/'Média'/'Baixa', padding 6/2.
+    // if (sub.priority != null) {
+    //   chips.add(Container(
+    //     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    //     decoration: BoxDecoration(color: _priorityColor(sub.priority).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+    //     child: Text(_priorityLabel(sub.priority), style: TextStyle(fontSize: 11, color: _priorityColor(sub.priority), fontWeight: FontWeight.w500)),
+    //   ));
+    // }
+    if (sub.priority != null) {
+      final pColor = _priorityColor(sub.priority);
+      chips.add(_buildStandardChip(_priorityLabel(sub.priority), pColor));
+    }
+
+    // PRIORITY-CHIP-OLD: chip de etiqueta usava TagChip (task_tile.dart) —
+    // fontSize 12, borderRadius 6, com borda, alpha 0.12: não bate com o
+    // padrão pill/dot 6x6/fontSize 11 pedido aqui. TagChip é compartilhado
+    // com chips de tarefa pai (modo lista e Balões), então não foi alterado;
+    // em vez disso, as subtarefas passam a usar o chip padronizado inline.
+    // if (sub.labelIds.isNotEmpty) {
+    //   for (final l in _allLabels.where((l) => sub.labelIds.contains(l.id)).take(2)) {
+    //     chips.add(TagChip(label: l.name, color: l.color));
+    //   }
+    // }
+    // LABEL-CHIP-OLD: _buildStandardChip já batia o padrão pill/dot, mas o
+    // chip de etiqueta agora usa o widget LabelChip único (task_tile.dart),
+    // compartilhado com os outros 3 locais de chip de etiqueta no app.
+    // if (sub.labelIds.isNotEmpty) {
+    //   for (final l in _allLabels.where((l) => sub.labelIds.contains(l.id)).take(2)) {
+    //     chips.add(_buildStandardChip(l.name, l.color));
+    //   }
+    // }
+    if (sub.labelIds.isNotEmpty) {
+      for (final l in _allLabels.where((l) => sub.labelIds.contains(l.id)).take(2)) {
+        chips.add(LabelChip(label: l.name, color: l.color));
+      }
+    }
+
+    if (chips.isEmpty) return null;
+    return Wrap(spacing: 5, runSpacing: 4, children: chips);
+  }
+
+  // CORREÇÃO B: SubtaskPriority real do app é {high, medium, low}, não
+  // p1-p4 como no pedido original.
+  Color _priorityColor(SubtaskPriority? p) => switch (p) {
+    SubtaskPriority.high => const Color(0xFFDC4C3E),
+    SubtaskPriority.medium => const Color(0xFFEB8909),
+    SubtaskPriority.low => const Color(0xFF246FE0),
+    null => Colors.white.withValues(alpha: 0.3),
+  };
+
+  // PRIORITY-CHIP-OLD: 'Alta'/'Média'/'Baixa'.
+  // String _priorityLabel(SubtaskPriority? p) => switch (p) {
+  //   SubtaskPriority.high => 'Alta',
+  //   SubtaskPriority.medium => 'Média',
+  //   SubtaskPriority.low => 'Baixa',
+  //   null => '',
+  // };
+  // SubtaskPriority real tem só 3 níveis (high/medium/low) — mapeado para
+  // P1/P2/P3 (não há P4 nesse enum).
+  String _priorityLabel(SubtaskPriority? p) => switch (p) {
+    SubtaskPriority.high => 'P1',
+    SubtaskPriority.medium => 'P2',
+    SubtaskPriority.low => 'P3',
+    null => '',
+  };
+
+  // Chip padrão único para prioridade e etiqueta nas subtarefas do modo
+  // lista: pill (radius 20), padding 7/3, fontSize 11/w500, dot 6x6.
+  Widget _buildStandardChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 18,
-            height: 18,
-            margin: const EdgeInsets.only(top: 1, right: 8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: sub.done ? const Color(0xFF22C55E) : Colors.transparent,
-              border: Border.all(
-                color: sub.done ? const Color(0xFF22C55E) : Colors.white.withValues(alpha: 0.3),
-                width: 2,
-              ),
-            ),
-            child: sub.done
-                ? const Icon(Icons.check_rounded, size: 10, color: Colors.white)
-                : null,
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          Expanded(
-            child: Text(
-              sub.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withValues(alpha: 0.7),
-                decoration: sub.done ? TextDecoration.lineThrough : TextDecoration.none,
-              ),
-            ),
-          ),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: color)),
         ],
       ),
     );
