@@ -5,6 +5,7 @@ import '../models/section.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
 import '../services/haptic_service.dart';
+import '../widgets/task_context_menu.dart';
 // CORRIGIDO_ETAPA3B
 import '../services/label_repository.dart';
 import '../services/section_repository.dart';
@@ -13,6 +14,9 @@ import '../theme/app_colors.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/swipeable_task_tile.dart';
+import '../widgets/task_detail/subtask_item.dart';
+import '../widgets/task_detail/sheets/subtask_detail_sheet.dart';
+import '../widgets/task_detail/sheets/task_labels_picker_sheet.dart' show LabelOption;
 import '../widgets/task_tile.dart';
 import 'quick_add_task_sheet.dart';
 import 'task_detail_sheet.dart';
@@ -51,6 +55,12 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   // guarda isso dentro do State privado de TaskTile — não há nada a
   // reaproveitar aqui, então este é um conjunto novo e isolado.
   final Set<String> _expandedListIds = {};
+
+  // ANIM-DONE: tarefas em transição de conclusão no modo lista. Modo
+  // Balões anima diferente (strikethrough + colapso/remoção da row via
+  // _completionCtrl em TaskTile, ver task_tile.dart) — aqui a row continua
+  // visível, só dimming/strikethrough animados.
+  final Set<String> _completingTaskIds = {};
 
   String get _prefsKey => 'proj_detail_show_completed_${widget.projectId}';
 
@@ -673,20 +683,57 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
     final expanded = _expandedListIds.contains(task.id);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildTaskListRowContent(task, done, subtaskDone, subtaskTotal, dateChip, expanded),
-        if (expanded)
-          for (var si = 0; si < task.subtasks.length; si++)
-            _buildTaskListSubtaskRow(task.subtasks[si]),
-      ],
+    // PERF-REPAINT-OLD: row inteira (cabeçalho + subtarefas expandidas)
+    // sem RepaintBoundary — qualquer repaint local podia se propagar.
+    // return Column(
+    //   crossAxisAlignment: CrossAxisAlignment.start,
+    //   children: [
+    //     _buildTaskListRowContent(task, done, subtaskDone, subtaskTotal, dateChip, expanded),
+    //     if (expanded)
+    //       for (var si = 0; si < task.subtasks.length; si++)
+    //         _buildTaskListSubtaskRow(task.subtasks[si]),
+    //   ],
+    // );
+    return RepaintBoundary(
+      key: ValueKey('rb_list_${task.id}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTaskListRowContent(task, done, subtaskDone, subtaskTotal, dateChip, expanded),
+          if (expanded)
+            for (var si = 0; si < task.subtasks.length; si++)
+              _buildTaskListSubtaskRow(task, task.subtasks[si]),
+        ],
+      ),
     );
   }
 
   // M5-EXPAND
+  // LONGPRESS-OLD: row sem onLongPress — sem menu de contexto no modo
+  // lista. Mesmo showTaskContextMenu(context, {task, tapPosition, onEdit,
+  // onComplete, onDelete, onRefresh}) usado por SwipeableTaskTile (modo
+  // Balões, swipeable_task_tile.dart:100-108), via GestureDetector
+  // wrapper (onLongPressStart + onSecondaryTapDown) — mesmo padrão, não
+  // duplicado.
+  Future<void> _openTaskListContextMenu(BuildContext context, Task task, Offset tapPosition) async {
+    final i = _tasks.indexOf(task);
+    await showTaskContextMenu(
+      context,
+      task: task,
+      tapPosition: tapPosition,
+      onEdit: () => showTaskDetailSheet(context, task, onSaved: _loadTasks),
+      onComplete: i == -1 ? null : () => _toggleDone(i),
+      onDelete: i == -1 ? null : () => _deleteTask(i),
+      onRefresh: _loadTasks,
+    );
+  }
+
   Widget _buildTaskListRowContent(Task task, bool done, int subtaskDone, int subtaskTotal, Widget? dateChip, bool expanded) {
-    return Container(
+    // LONGPRESS-OLD: return Container(...) direto, sem GestureDetector.
+    return GestureDetector(
+      onLongPressStart: (d) => _openTaskListContextMenu(context, task, d.globalPosition),
+      onSecondaryTapDown: (d) => _openTaskListContextMenu(context, task, d.globalPosition),
+      child: Container(
       constraints: const BoxConstraints(minHeight: 48),
       decoration: BoxDecoration(
         border: Border(
@@ -694,17 +741,49 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         ),
       ),
       child: InkWell(
-        onTap: () => showTaskDetailSheet(context, task, onSaved: _loadTasks),
-        child: Padding(
+        // RIPPLE-OLD: sem splashColor/highlightColor/splashFactory —
+        // onLongPressStart do GestureDetector wrapper disparava o ripple
+        // cinza padrão do InkWell.
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashFactory: NoSplash.splashFactory,
+        // HAPTIC-OLD: onTap: () => showTaskDetailSheet(context, task, onSaved: _loadTasks),
+        onTap: () {
+          HapticService().selectionClick();
+          showTaskDetailSheet(context, task, onSaved: _loadTasks);
+        },
+        // ANIM-DONE: opacity anima junto da conclusão (transform/opacity
+        // apenas, sem animar height/top).
+        child: AnimatedOpacity(
+          opacity: done ? 0.45 : 1.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => done ? _toggleUndone(_tasks.indexOf(task)) : _toggleDone(_tasks.indexOf(task)),
+                // HAPTIC-OLD: onTap: () => done ? _toggleUndone(_tasks.indexOf(task)) : _toggleDone(_tasks.indexOf(task)),
+                // ANIM-DONE-OLD: sem entrada em _completingTaskIds.
+                onTap: () async {
+                  HapticService().taskCompleted();
+                  setState(() => _completingTaskIds.add(task.id));
+                  if (done) {
+                    _toggleUndone(_tasks.indexOf(task));
+                  } else {
+                    _toggleDone(_tasks.indexOf(task));
+                  }
+                  await Future.delayed(const Duration(milliseconds: 600));
+                  if (mounted) setState(() => _completingTaskIds.remove(task.id));
+                },
                 child: Padding(
                   padding: const EdgeInsets.only(top: 2, right: 10),
+                  // PriorityDot já é um AnimatedContainer interno (150ms,
+                  // ver task_tile.dart) — preserva a cor por prioridade, não
+                  // substituído pela decoration fixa verde do pedido (perderia
+                  // a cor de prioridade quando não concluída).
                   child: PriorityDot(priority: task.priority, done: done),
                 ),
               ),
@@ -712,17 +791,34 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      task.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    // ANIM-DONE-OLD: Text estático, sem transição de estilo.
+                    // Text(
+                    //   task.title,
+                    //   maxLines: 1,
+                    //   overflow: TextOverflow.ellipsis,
+                    //   style: TextStyle(
+                    //     fontSize: 15,
+                    //     fontWeight: FontWeight.w500,
+                    //     color: done ? Colors.white.withValues(alpha: 0.35) : AppColors.textPrimary,
+                    //     decoration: done ? TextDecoration.lineThrough : TextDecoration.none,
+                    //   ),
+                    // ),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 250),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: done
-                            ? Colors.white.withValues(alpha: 0.35)
-                            : AppColors.textPrimary,
+                        color: done ? Colors.white.withValues(alpha: 0.35) : AppColors.textPrimary,
                         decoration: done ? TextDecoration.lineThrough : TextDecoration.none,
+                        decorationColor: Colors.white.withValues(alpha: 0.3),
+                      ),
+                      child: Text(
+                        // Sem style: aqui — herda do AnimatedDefaultTextStyle
+                        // acima (Text.style, se definido, sobrescreveria o
+                        // ambient e quebraria a transição).
+                        task.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (task.description != null && task.description!.isNotEmpty)
@@ -782,10 +878,38 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               //     padding: const EdgeInsets.only(left: 8, top: 2),
               //     child: Icon(Icons.chevron_right, size: 18, color: Colors.white.withValues(alpha: 0.3)),
               //   ),
+              // EXPAND-BTN-OLD: padding (left:8, top:2) só — área de toque
+              // bem menor que 44x44 (HIG mínimo).
+              // if (task.hasSubtasks)
+              //   GestureDetector(
+              //     behavior: HitTestBehavior.opaque,
+              //     onTap: () {
+              //       setState(() {
+              //         if (_expandedListIds.contains(task.id)) {
+              //           _expandedListIds.remove(task.id);
+              //         } else {
+              //           _expandedListIds.add(task.id);
+              //         }
+              //       });
+              //     },
+              //     child: Padding(
+              //       padding: const EdgeInsets.only(left: 8, top: 2),
+              //       child: Icon(
+              //         expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+              //         size: 20,
+              //         color: Colors.white.withValues(alpha: 0.3),
+              //       ),
+              //     ),
+              //   ),
+              // EXPAND-GESTURE-OLD: HitTestBehavior.opaque — investigado,
+              // não causava conflito real com subtarefas (subtask rows são
+              // irmãs fora dessa árvore), mas removido por pedido explícito.
               if (task.hasSubtasks)
                 GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                  // behavior: HitTestBehavior.opaque,
+                  // HAPTIC-OLD: onTap sem HapticService().selectionClick().
                   onTap: () {
+                    HapticService().selectionClick();
                     setState(() {
                       if (_expandedListIds.contains(task.id)) {
                         _expandedListIds.remove(task.id);
@@ -795,64 +919,133 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                     });
                   },
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 8, top: 2),
-                    child: Icon(
-                      expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                      size: 20,
-                      color: Colors.white.withValues(alpha: 0.3),
+                    padding: const EdgeInsets.all(12),
+                    child: AnimatedRotation(
+                      turns: expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 22,
+                        color: Colors.white.withValues(alpha: 0.35),
+                      ),
                     ),
                   ),
                 ),
             ],
           ),
         ),
+        ),
       ),
+      ),
+    );
+  }
+
+  // SUBTASK-TAP-FIX: replicado pela 3ª vez nesta sessão (revertido
+  // externamente nas 2 anteriores). Mesmo padrão otimista de
+  // _toggleDone/_toggleUndone; _openSubtaskDetail reaproveita a função
+  // pública showSubtaskDetailSheet (cards mode), não duplica UI.
+  void _toggleSubtaskDone(Task task, Subtask sub) {
+    final taskIndex = _tasks.indexOf(task);
+    if (taskIndex == -1) return;
+    final subIndex = task.subtasks.indexOf(sub);
+    if (subIndex == -1) return;
+    final newDone = !sub.done;
+    final updatedSub = sub.copyWith(done: newDone);
+    final updatedSubtasks = List<Subtask>.from(task.subtasks);
+    updatedSubtasks[subIndex] = updatedSub;
+    final updatedTask = task.copyWith(subtasks: updatedSubtasks);
+    setState(() => _tasks[taskIndex] = updatedTask);
+    HapticService().selectionClick();
+    if (sub.id != null) {
+      supabase.from('subtasks').update({'concluida': newDone}).eq('id', sub.id!).catchError((_) {
+        if (mounted) setState(() => _tasks[taskIndex] = task);
+      });
+    } else {
+      supabase
+          .from('subtasks')
+          .update({'concluida': newDone})
+          .eq('task_id', task.id)
+          .eq('ordem', sub.order)
+          .catchError((_) {
+        if (mounted) setState(() => _tasks[taskIndex] = task);
+      });
+    }
+  }
+
+  void _openSubtaskDetail(Task task, Subtask sub) {
+    HapticService().lightImpact();
+    final item = SubtaskItem(
+      id: sub.id,
+      title: sub.title,
+      description: sub.description,
+      done: sub.done,
+      priority: sub.priority,
+      labelIds: sub.labelIds.toSet(),
+      dueDate: sub.dueDate,
+      valor: sub.valor,
+    );
+    showSubtaskDetailSheet(
+      context: context,
+      item: item,
+      labels: _allLabels.map((l) => LabelOption(l.id, l.name, l.color)).toList(),
+      parentTaskTitle: task.title,
+      onChanged: _loadTasks,
     );
   }
 
   // M5-EXPAND: linha de subtarefa indentada, exibida quando o id da
   // tarefa pai está em _expandedListIds.
-  Widget _buildTaskListSubtaskRow(Subtask sub) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(36, 8, 18, 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.015),
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.03), width: 0.5),
+  // SUBTASK-TAP-OLD: sem InkWell/GestureDetector — toque não fazia nada.
+  Widget _buildTaskListSubtaskRow(Task task, Subtask sub) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => _openSubtaskDetail(task, sub),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(36, 8, 18, 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.015),
+          border: Border(
+            bottom: BorderSide(color: Colors.white.withValues(alpha: 0.03), width: 0.5),
+          ),
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 18,
-            height: 18,
-            margin: const EdgeInsets.only(top: 1, right: 8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: sub.done ? const Color(0xFF22C55E) : Colors.transparent,
-              border: Border.all(
-                color: sub.done ? const Color(0xFF22C55E) : Colors.white.withValues(alpha: 0.3),
-                width: 2,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _toggleSubtaskDone(task, sub),
+              child: Container(
+                width: 18,
+                height: 18,
+                margin: const EdgeInsets.only(top: 1, right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: sub.done ? const Color(0xFF22C55E) : Colors.transparent,
+                  border: Border.all(
+                    color: sub.done ? const Color(0xFF22C55E) : Colors.white.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: sub.done
+                    ? const Icon(Icons.check_rounded, size: 10, color: Colors.white)
+                    : null,
               ),
             ),
-            child: sub.done
-                ? const Icon(Icons.check_rounded, size: 10, color: Colors.white)
-                : null,
-          ),
-          Expanded(
-            child: Text(
-              sub.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withValues(alpha: 0.7),
-                decoration: sub.done ? TextDecoration.lineThrough : TextDecoration.none,
+            Expanded(
+              child: Text(
+                sub.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.7),
+                  decoration: sub.done ? TextDecoration.lineThrough : TextDecoration.none,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1167,41 +1360,75 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           ? Center(child: CircularProgressIndicator(color: AppColors.accent, strokeWidth: 2))
           : isEmpty
               ? const Center(child: EmptyState(icon: Icons.task_alt_outlined, title: 'Nenhuma tarefa', subtitle: 'Adicione tarefas usando o botão +'))
-              : ListView(
-                  padding: EdgeInsets.fromLTRB(0, 12, 0, bottomInset),
-                  children: [
-                    ..._buildSectionedRows(),
-                    if (_showCompleted && _completedTasks.isNotEmpty)
-                      CompletedSectionHeader(
-                        count: _completedTasks.length,
-                        expanded: _completedExpanded,
-                        onTap: () {
-                          HapticService().selectionClick();
-                          setState(() => _completedExpanded = !_completedExpanded);
-                        },
-                      ),
-                    if (_showCompleted && _completedExpanded)
-                      for (var ci = 0; ci < _completedTasks.length; ci++)
-                        RepaintBoundary(
-                          key: ValueKey('rb_done_${_completedTasks[ci].id}'),
-                          child: SwipeableTaskTile(
-                            task: _completedTasks[ci],
-                            onDeleteRequested: () => _deleteCompletedTask(ci),
-                            onEdit: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),
-                            onRefresh: _loadTasks,
-                            child: TaskTile(
-                              task: _completedTasks[ci],
-                              showProject: false,
-                              // CORRIGIDO_ETAPA3B
-                              allLabels: _allLabels,
-                              onSubtaskToggled: (_) {},
-                              onCompleted: () => _toggleUndone(ci),
-                              onTap: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),
-                            ),
-                          ),
-                        ),
-                  ],
-                ),
+              : _buildTaskListView(bottomInset),
+    );
+  }
+
+  // PERF-LIST-OLD: ListView(children: [...]) eager — construía TODAS as
+  // rows (seções + completed) de uma vez no build(), mesmo fora da
+  // viewport. Substituído por CustomScrollView+SliverList com builder
+  // lazy. _buildSectionedRows() não é alterado internamente (continua
+  // agrupando por seção do jeito que já fazia); rows é calculado uma
+  // única vez por build e cacheado em variável local — não chamado de
+  // novo dentro do builder/childCount.
+  // : ListView(
+  //     padding: EdgeInsets.fromLTRB(0, 12, 0, bottomInset),
+  //     children: [
+  //       ..._buildSectionedRows(),
+  //       if (_showCompleted && _completedTasks.isNotEmpty)
+  //         CompletedSectionHeader(...),
+  //       if (_showCompleted && _completedExpanded)
+  //         for (var ci = 0; ci < _completedTasks.length; ci++)
+  //           RepaintBoundary(...),
+  //     ],
+  //   ),
+  Widget _buildTaskListView(double bottomInset) {
+    final rows = <Widget>[
+      ..._buildSectionedRows(),
+      if (_showCompleted && _completedTasks.isNotEmpty)
+        CompletedSectionHeader(
+          count: _completedTasks.length,
+          expanded: _completedExpanded,
+          onTap: () {
+            HapticService().selectionClick();
+            setState(() => _completedExpanded = !_completedExpanded);
+          },
+        ),
+      if (_showCompleted && _completedExpanded)
+        for (var ci = 0; ci < _completedTasks.length; ci++)
+          RepaintBoundary(
+            key: ValueKey('rb_done_${_completedTasks[ci].id}'),
+            child: SwipeableTaskTile(
+              task: _completedTasks[ci],
+              onDeleteRequested: () => _deleteCompletedTask(ci),
+              onEdit: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),
+              onRefresh: _loadTasks,
+              child: TaskTile(
+                task: _completedTasks[ci],
+                showProject: false,
+                // CORRIGIDO_ETAPA3B
+                allLabels: _allLabels,
+                onSubtaskToggled: (_) {},
+                onCompleted: () => _toggleUndone(ci),
+                onTap: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),
+              ),
+            ),
+          ),
+    ];
+
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(0, 12, 0, bottomInset),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => rows[index],
+              childCount: rows.length,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

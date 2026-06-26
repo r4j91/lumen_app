@@ -232,23 +232,43 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                         ),
                       ),
                     ),
+                    // EXPAND-BTN-OLD: padding (4,16,14,16) — ~38x52, abaixo
+                    // do mínimo 44x44 do HIG.
                     // Expand toggle (subtask tasks) or static affordance (others)
+                    // if (task.hasSubtasks)
+                    //   GestureDetector(
+                    //     behavior: HitTestBehavior.opaque,
+                    //     onTap: _toggleExpand,
+                    //     child: Padding(
+                    //       padding:
+                    //           const EdgeInsets.fromLTRB(4, 16, 14, 16),
+                    //       child: AnimatedRotation(
+                    //         turns: _expanded ? 0.5 : 0,
+                    //         duration: const Duration(milliseconds: 220),
+                    //         curve: Curves.easeOutCubic,
+                    //         child: Icon(
+                    //           Icons.keyboard_arrow_down,
+                    //           size: 20,
+                    //           color: AppColors.textTertiary
+                    //               .withValues(alpha: 0.55),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   )
                     if (task.hasSubtasks)
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: _toggleExpand,
                         child: Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(4, 16, 14, 16),
+                          padding: const EdgeInsets.all(12),
                           child: AnimatedRotation(
                             turns: _expanded ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 220),
+                            duration: const Duration(milliseconds: 200),
                             curve: Curves.easeOutCubic,
                             child: Icon(
-                              Icons.keyboard_arrow_down,
-                              size: 20,
-                              color: AppColors.textTertiary
-                                  .withValues(alpha: 0.55),
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 22,
+                              color: Colors.white.withValues(alpha: 0.35),
                             ),
                           ),
                         ),
