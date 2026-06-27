@@ -1,11 +1,11 @@
 {
-    "name": "LUMEN",
-    "short_name": "LUMEN",
+    "name": "Stacked",
+    "short_name": "Stacked",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#1A1B1E",
     "theme_color": "#1A1B1E",
-    "description": "LUMEN — Gerenciador de tarefas",
+    "description": "Stacked — Gerenciador de tarefas",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

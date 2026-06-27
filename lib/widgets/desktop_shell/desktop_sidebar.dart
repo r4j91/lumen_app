@@ -471,7 +471,7 @@ class _SBLogo extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Text(
-            'LUMEN',
+            'STACKED',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
@@ -1174,7 +1174,7 @@ class _SidebarLogo extends StatelessWidget {
             child: Image.asset('assets/icon/lumen_fosco.png', width: 28, height: 28, fit: BoxFit.cover),
           ),
           const SizedBox(width: 10),
-          Text('LUMEN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: -0.3)),
+          Text('STACKED', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: -0.3)),
         ],
       ),
     );

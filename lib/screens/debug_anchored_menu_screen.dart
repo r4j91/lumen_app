@@ -61,7 +61,7 @@ class _DebugAnchoredMenuScreenState extends State<DebugAnchoredMenuScreen> {
   static const _projectItems = [
     AnchoredMenuItem(id: 'inbox', label: 'Caixa de entrada', icon: Icons.move_to_inbox_rounded),
     AnchoredMenuItem(id: 'proj1', label: 'Design System', icon: Icons.circle, iconColor: Color(0xFF5FD3DC)),
-    AnchoredMenuItem(id: 'proj2', label: 'Lúmen App', icon: Icons.circle, iconColor: Color(0xFFB18CF5)),
+    AnchoredMenuItem(id: 'proj2', label: 'Stacked App', icon: Icons.circle, iconColor: Color(0xFFB18CF5)),
     AnchoredMenuItem(id: 'proj3', label: 'Pessoal', icon: Icons.circle, iconColor: Color(0xFF8FD46B)),
   ];
 

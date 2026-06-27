@@ -1,4 +1,4 @@
-package com.example.lumen_app
+package com.roarns.stacked
 
 import io.flutter.embedding.android.FlutterActivity
 

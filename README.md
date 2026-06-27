@@ -1,4 +1,4 @@
-# lumen_app
+# stacked
 
 A new Flutter project.
 

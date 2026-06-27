@@ -69,7 +69,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   const SizedBox(height: 16),
                   // Logo / título
                   Text(
-                    'LUMEN',
+                    'STACKED',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 40,

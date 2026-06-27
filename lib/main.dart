@@ -46,11 +46,11 @@ Future<void> main() async {
     ),
   );
 
-  runApp(const LumenApp());
+  runApp(const StackedApp());
 }
 
-class LumenApp extends StatelessWidget {
-  const LumenApp({super.key});
+class StackedApp extends StatelessWidget {
+  const StackedApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +59,7 @@ class LumenApp extends StatelessWidget {
       builder: (context, _) {
         final colors = ThemeProvider.instance.colors;
         return MaterialApp(
-          title: 'LUMEN',
+          title: 'Stacked',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.buildFrom(colors),
           home: const _AuthGate(),

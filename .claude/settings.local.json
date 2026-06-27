@@ -173,7 +173,17 @@
       "Bash(awk -F: '{s+=$2} END{print \"InkWell total:\",s}')",
       "Bash(awk -F: '{s+=$2} END{print \"Pressable total:\",s}')",
       "Bash(echo \"exit: $?\")",
-      "Bash(awk -F: '$1>=775 && $1<=1320')"
+      "Bash(awk -F: '$1>=775 && $1<=1320')",
+      "Bash(mkdir -p ../../../../../../android/app/src/main/kotlin/com/roarns/stacked)",
+      "Bash(mkdir -p /Users/roarns/Documents/lumen_app/android/app/src/main/kotlin/com/roarns/stacked)",
+      "Bash(mv /Users/roarns/Documents/lumen_app/android/app/src/main/kotlin/com/example/lumen_app/MainActivity.kt /Users/roarns/Documents/lumen_app/android/app/src/main/kotlin/com/roarns/stacked/MainActivity.kt)",
+      "Bash(rmdir /Users/roarns/Documents/lumen_app/android/app/src/main/kotlin/com/example/lumen_app)",
+      "Bash(rmdir /Users/roarns/Documents/lumen_app/android/app/src/main/kotlin/com/example)",
+      "Bash(sed -i '' 's/com\\\\.example\\\\.lumenApp\\\\.RunnerTests/com.example.stacked.RunnerTests/g' macos/Runner.xcodeproj/project.pbxproj)",
+      "Bash(sed -i '' 's/lumen_app\\\\.app/stacked.app/g' macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme)",
+      "Bash(ls -la /Users/roarns/Documents/ | grep -i \"lumen\\\\|stacked\")",
+      "Read(//Users/roarns/Documents/**)",
+      "Bash(mv lumen_app stacked)"
     ],
     "additionalDirectories": [
       "/proc/10836/fd"

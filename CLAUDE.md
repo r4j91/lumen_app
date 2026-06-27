@@ -1,4 +1,4 @@
-# Lúmen — Contexto do Projeto
+# Stacked — Contexto do Projeto
 
 ## Visão Geral
 App de gerenciamento de tarefas estilo Todoist/Things 3, sendo reconstruído do zero em Flutter (anteriormente era um PWA em React/Tailwind).

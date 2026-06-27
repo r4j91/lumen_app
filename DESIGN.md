@@ -1,5 +1,5 @@
 ---
-name: Lumen
+name: Stacked
 description: Gerenciador de tarefas pessoal, dark-mode-first, estilo Todoist/Things 3
 colors:
   background-graphite: "#1A1B1E"
@@ -54,13 +54,13 @@ components:
     rounded: "{rounded.pill}"
 ---
 
-# Design System: Lumen
+# Design System: Stacked
 
 ## 1. Overview
 
 **Creative North Star: "The Quiet Control Room"**
 
-Lumen é um painel de controle silencioso: alta densidade de informação organizada em camadas de tom escuro, onde nada compete por atenção sem necessidade. O sistema rejeita explicitamente o Todoist genérico colorido-demais (cores saturadas espalhadas sem hierarquia), o Notion denso-de-blocos (excesso de opções por item, navegação lenta) e qualquer gamificação visual (confete, badges, streaks, sons de recompensa). Densidade não é minimalismo vazio — é organização: linhas de tarefa compactas (~52-56px), tipografia com pesos diferenciados, e um único accent cyan usado com moderação para indicar interatividade e estado, não decoração.
+Stacked é um painel de controle silencioso: alta densidade de informação organizada em camadas de tom escuro, onde nada compete por atenção sem necessidade. O sistema rejeita explicitamente o Todoist genérico colorido-demais (cores saturadas espalhadas sem hierarquia), o Notion denso-de-blocos (excesso de opções por item, navegação lenta) e qualquer gamificação visual (confete, badges, streaks, sons de recompensa). Densidade não é minimalismo vazio — é organização: linhas de tarefa compactas (~52-56px), tipografia com pesos diferenciados, e um único accent cyan usado com moderação para indicar interatividade e estado, não decoração.
 
 **Key Characteristics:**
 - Dark mode como cidadão de primeira classe (5 temas: graphite/moonstone/midnight/obsidian/slate — graphite é o padrão)
@@ -113,7 +113,7 @@ A paleta é construída em camadas de cinza-azulado escuro (tema graphite, padr�
 
 ## 4. Elevation
 
-Lumen é tonal, não sombreado. Profundidade vem inteiramente do contraste entre as três camadas de fundo (background → surface → surfaceVariant) e, ocasionalmente, de blur (BackdropFilter) em sheets/popovers que precisam se destacar sobre conteúdo rolável por baixo. Não há vocabulário de `box-shadow` estrutural no design system — onde sombra aparece hoje no código (alguns botões/FABs), é incidental, não um token do sistema, e deve ser tratada como dívida a normalizar, não como padrão a expandir.
+Stacked é tonal, não sombreado. Profundidade vem inteiramente do contraste entre as três camadas de fundo (background → surface → surfaceVariant) e, ocasionalmente, de blur (BackdropFilter) em sheets/popovers que precisam se destacar sobre conteúdo rolável por baixo. Não há vocabulário de `box-shadow` estrutural no design system — onde sombra aparece hoje no código (alguns botões/FABs), é incidental, não um token do sistema, e deve ser tratada como dívida a normalizar, não como padrão a expandir.
 
 ### Named Rules
 **The Flat-By-Default Rule.** Superfícies são planas em repouso. Se algo precisa se destacar, sobe uma camada de tom (surface → surfaceVariant) ou ganha um `BackdropFilter` blur (apenas em sheets/popovers/menus flutuantes sobre conteúdo) — nunca um box-shadow decorativo.
