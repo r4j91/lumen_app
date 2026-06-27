@@ -1,4 +1,24 @@
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+
 enum SubtaskPriority { high, medium, low }
+
+// PRIORITY-CENTRAL-V1: extension centralizada — consolida 2 implementações
+// idênticas (subtask_editor.dart, subtask_detail_sheet.dart) que já usavam
+// os mesmos tokens AppColors.priorityHigh/Medium/Low e os mesmos labels.
+extension SubtaskPriorityExtension on SubtaskPriority {
+  Color get color => switch (this) {
+        SubtaskPriority.high => AppColors.priorityHigh,
+        SubtaskPriority.medium => AppColors.priorityMedium,
+        SubtaskPriority.low => AppColors.priorityLow,
+      };
+
+  String get label => switch (this) {
+        SubtaskPriority.high => 'P1',
+        SubtaskPriority.medium => 'P2',
+        SubtaskPriority.low => 'P3',
+      };
+}
 
 class Subtask {
   final String? id;

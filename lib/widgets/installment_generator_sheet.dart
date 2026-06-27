@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/subtask_repository.dart';
 import '../theme/app_colors.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'pressable.dart';
 
 /// Abre o gerador de parcelas (N subtarefas com vencimentos calculados
 /// automaticamente) para a tarefa [taskId].
@@ -248,7 +249,8 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
           ],
         ),
       ),
-      GestureDetector(
+      // GESTURE-OLD: GestureDetector sem feedback visual
+      Pressable(
         onTap: () => Navigator.of(context).pop(),
         behavior: HitTestBehavior.opaque,
         child: Padding(
@@ -302,11 +304,12 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                GestureDetector(
+                // GESTURE-OLD: GestureDetector sem feedback visual
+                Pressable(
                   onTap: () => setState(() => _quantity = (_quantity + 1).clamp(1, 360)),
                   child: HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01, size: 18, color: AppColors.textSecondary),
                 ),
-                GestureDetector(
+                Pressable(
                   onTap: () => setState(() => _quantity = (_quantity - 1).clamp(1, 360)),
                   child: HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, size: 18, color: AppColors.textSecondary),
                 ),
@@ -326,7 +329,8 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
     ],
   );
 
-  Widget _buildDueDateField() => GestureDetector(
+  // GESTURE-OLD: GestureDetector sem feedback visual
+  Widget _buildDueDateField() => Pressable(
     onTap: _pickFirstDueDate,
     child: Container(
       decoration: _inputDecoration,
@@ -353,7 +357,8 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
 
   Widget _frequencyPill(String id, String label) {
     final selected = _frequency == id;
-    return GestureDetector(
+    // GESTURE-OLD: GestureDetector sem feedback visual
+    return Pressable(
       onTap: () => setState(() => _frequency = id),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -450,7 +455,8 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
     children: [
       Expanded(
         flex: 1,
-        child: GestureDetector(
+        // GESTURE-OLD: GestureDetector sem feedback visual
+        child: Pressable(
           onTap: () => Navigator.of(context).pop(),
           child: Container(
             alignment: Alignment.center,
@@ -468,7 +474,8 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
       const SizedBox(width: 10),
       Expanded(
         flex: 2,
-        child: GestureDetector(
+        // GESTURE-OLD: GestureDetector sem feedback visual
+        child: Pressable(
           onTap: _generating ? null : _generate,
           child: Container(
             alignment: Alignment.center,

@@ -373,12 +373,13 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
       context: context,
       anchorKey: _priorityKey,
       items: [
+        // COLORS-OLD: Color(0xFFDC4C3E)/Color(0xFFEB8909)/Color(0xFF246FE0)
         AnchoredMenuItem(id: 'high',   label: 'Prioridade 1', icon: Icons.flag,
-            iconColor: const Color(0xFFDC4C3E), selected: _priority == Priority.high),
+            iconColor: AppColors.subtaskPriorityHigh, selected: _priority == Priority.high),
         AnchoredMenuItem(id: 'medium', label: 'Prioridade 2', icon: Icons.flag,
-            iconColor: const Color(0xFFEB8909), selected: _priority == Priority.medium),
+            iconColor: AppColors.subtaskPriorityMedium, selected: _priority == Priority.medium),
         AnchoredMenuItem(id: 'low',    label: 'Prioridade 3', icon: Icons.flag,
-            iconColor: const Color(0xFF246FE0), selected: _priority == Priority.low),
+            iconColor: AppColors.subtaskPriorityLow, selected: _priority == Priority.low),
         AnchoredMenuItem(id: 'none',   label: 'Sem prioridade', icon: Icons.flag_outlined,
             iconColor: AppColors.textTertiary, selected: _priority == null),
       ],
@@ -521,27 +522,20 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
     return base;
   }
 
-  Color get _priorityColor => switch (_priority) {
-    Priority.high   => AppColors.priorityHigh,
-    Priority.medium => AppColors.priorityMedium,
-    Priority.low    => AppColors.priorityLow,
-    null            => AppColors.textTertiary,
-  };
+  // PRIORITY-CENTRAL-OLD: _priorityColor/_priorityLabel locais — movidos
+  // pra PriorityExtension em lib/models/task.dart.
+  Color get _priorityColor => _priority?.color ?? AppColors.textTertiary;
 
-  // Part 6 — priority label
-  String get _priorityLabel => switch (_priority) {
-    Priority.high   => 'P1',
-    Priority.medium => 'P2',
-    Priority.low    => 'P3',
-    null            => '',
-  };
+  String get _priorityLabel => _priority?.label ?? '';
 
   // Part 6 — date color, reusing exact same colors as TaskDatePickerSheet
   // (Hoje=green, Amanhã=orange, Fim de semana=blue, Próxima semana=purple)
+  // COLORS-OLD: Color(0xFFF5A623)/Color(0xFF4D9FEC)/Color(0xFFB18CF5) — duplicavam priorityMedium/priorityLow/tagPurple
+  // 0xFF3BAA6E sem token equivalente — FIXED-COLOR: mesmo acento decorativo único do TaskDatePickerSheet
   static const _dateColorToday    = Color(0xFF3BAA6E);
-  static const _dateColorTomorrow = Color(0xFFF5A623);
-  static const _dateColorWeekend  = Color(0xFF4D9FEC);
-  static const _dateColorNextWeek = Color(0xFFB18CF5);
+  static const _dateColorTomorrow = AppColors.priorityMedium;
+  static const _dateColorWeekend  = AppColors.priorityLow;
+  static const _dateColorNextWeek = AppColors.tagPurple;
 
   Color get _datePillColor {
     if (_dueDate == null) return AppColors.textSecondary;

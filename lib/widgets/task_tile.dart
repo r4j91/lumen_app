@@ -181,11 +181,8 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Color _priorityColor(Priority p) => switch (p) {
-        Priority.high => AppColors.priorityHigh,
-        Priority.medium => AppColors.priorityMedium,
-        Priority.low => AppColors.priorityLow,
-      };
+  // PRIORITY-CENTRAL-OLD: _priorityColor local, não referenciado — movido
+  // pra PriorityExtension em lib/models/task.dart.
 
   @override
   Widget build(BuildContext context) {
@@ -337,11 +334,12 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final d = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+      // COLORS-OLD: Color(0xFFEF4444)/Color(0xFF22C55E)
       final Color dateColor;
       if (d.isBefore(today)) {
-        dateColor = const Color(0xFFEF4444);
+        dateColor = AppColors.overdue;
       } else if (d == today) {
-        dateColor = const Color(0xFF22C55E);
+        dateColor = AppColors.success;
       } else {
         dateColor = Colors.white.withValues(alpha: 0.45);
       }
@@ -739,10 +737,11 @@ class SubtaskList extends StatelessWidget {
 
   // ADICIONADO_ETAPA3B
   Widget _buildSubtaskCircle(Subtask sub, bool done) {
+    // COLORS-OLD: Color(0xFFDC4C3E)/Color(0xFFEB8909)/Color(0xFF246FE0)
     final priColor = switch (sub.priority) {
-      SubtaskPriority.high => const Color(0xFFDC4C3E),
-      SubtaskPriority.medium => const Color(0xFFEB8909),
-      SubtaskPriority.low => const Color(0xFF246FE0),
+      SubtaskPriority.high => AppColors.subtaskPriorityHigh,
+      SubtaskPriority.medium => AppColors.subtaskPriorityMedium,
+      SubtaskPriority.low => AppColors.subtaskPriorityLow,
       null => AppColors.textTertiary,
     };
     // M1-OLD: antes, done==true mantinha a cor da prioridade da subtask.
@@ -758,7 +757,8 @@ class SubtaskList extends StatelessWidget {
     //       ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 11, color: priColor.withValues(alpha: 0.8))
     //       : null,
     // );
-    const doneColor = Color(0xFF22C55E);
+    // COLORS-OLD: const doneColor = Color(0xFF22C55E);
+    const doneColor = AppColors.success;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       width: 18,
@@ -823,16 +823,17 @@ class SubtaskList extends StatelessWidget {
       final today = DateTime(now.year, now.month, now.day);
       final due = DateTime(sub.dueDate!.year, sub.dueDate!.month, sub.dueDate!.day);
       final diff = due.difference(today).inDays;
+      // COLORS-OLD: Color(0xFF7ECC49)/Color(0xFFDC4C3E)/Color(0xFFF0A830)
       final Color dotColor;
       final String label;
       if (diff == 0) {
-        dotColor = const Color(0xFF7ECC49);
+        dotColor = AppColors.dateDueToday;
         label = 'Hoje';
       } else if (diff < 0) {
-        dotColor = const Color(0xFFDC4C3E);
+        dotColor = AppColors.dateOverdue;
         label = '${due.day} ${_ptMonths[due.month - 1]}';
       } else {
-        dotColor = const Color(0xFFF0A830);
+        dotColor = AppColors.dateUpcoming;
         label = '${due.day} ${_ptMonths[due.month - 1]}';
       }
       chips.add(_metaChip(dotColor, label));
@@ -946,7 +947,8 @@ class PriorityDot extends StatelessWidget {
     //       ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 12, color: Colors.white)
     //       : null,
     // );
-    const doneColor = Color(0xFF22C55E);
+    // COLORS-OLD: const doneColor = Color(0xFF22C55E);
+    const doneColor = AppColors.success;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       width: 20,

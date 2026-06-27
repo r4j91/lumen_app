@@ -23,6 +23,7 @@ import '../widgets/task_detail/subtask_item.dart';
 import '../widgets/task_detail/task_detail_widgets.dart';
 import 'quick_add_task_sheet.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../widgets/pressable.dart';
 
 // Lightweight structs just for this sheet
 class _Project {
@@ -890,8 +891,9 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     final today = DateTime(now.year, now.month, now.day);
     final due = DateTime(_dueDate!.year, _dueDate!.month, _dueDate!.day);
     final diff = due.difference(today).inDays;
-    if (diff == 0) return const Color(0xFF7ECC49);
-    if (diff < 0) return const Color(0xFFDC4C3E);
+    // COLORS-OLD: Color(0xFF7ECC49)/Color(0xFFDC4C3E)
+    if (diff == 0) return AppColors.dateDueToday;
+    if (diff < 0) return AppColors.dateOverdue;
     return Colors.white.withValues(alpha: 0.85);
   }
 
@@ -1401,7 +1403,8 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
       child: Row(
         children: [
           // Project selector
-          GestureDetector(
+          // GESTURE-OLD: GestureDetector sem feedback visual
+          Pressable(
             key: _projectChipKey,
             onTap: () => _showProjectMenu(context),
             child: Container(
@@ -1905,7 +1908,8 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Header com chevron
-                  GestureDetector(
+                  // GESTURE-OLD: GestureDetector sem feedback visual
+                  Pressable(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => setState(() => _subtasksExpanded = !_subtasksExpanded),
                     child: Padding(
@@ -2109,7 +2113,8 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
               ),
               const SizedBox(width: 6),
               // Send button — activates when there's text
-              GestureDetector(
+              // GESTURE-OLD: GestureDetector sem feedback visual
+              Pressable(
                 onTap: hasComment ? _sendComment : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
@@ -2296,6 +2301,8 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     // BOTTOM SHEET ANTIGO — manter comentado, reverter se necessário.
     // Para reverter: renomear de volta para _showPriorityMenu e comentar
     // o método _showPriorityMenu novo abaixo.
+    // COLORS-OLD: método morto (_showPriorityMenu_OLD, não chamado em
+    // lugar nenhum, mantido só pra revert) — cores não migradas, sem risco.
     if (widget.asDialog) {
       const opts = [
         (value: Priority.high,   label: 'Alta',    color: Color(0xFFDC4C3E), icon: Icons.flag),
@@ -2354,25 +2361,27 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
       context: context,
       anchorKey: _priorityChipKey,
       items: [
+        // COLORS-OLD: Color(0xFFDC4C3E)/Color(0xFFEB8909)/Color(0xFF246FE0)
+        // — mesma paleta de ícone-flag usada em SubtaskPriority, reaproveitada
         AnchoredMenuItem(
           id: 'high',
           label: 'Prioridade 1',
           icon: Icons.flag,
-          iconColor: const Color(0xFFDC4C3E),
+          iconColor: AppColors.subtaskPriorityHigh,
           selected: _priority == Priority.high,
         ),
         AnchoredMenuItem(
           id: 'medium',
           label: 'Prioridade 2',
           icon: Icons.flag,
-          iconColor: const Color(0xFFEB8909),
+          iconColor: AppColors.subtaskPriorityMedium,
           selected: _priority == Priority.medium,
         ),
         AnchoredMenuItem(
           id: 'low',
           label: 'Prioridade 3',
           icon: Icons.flag,
-          iconColor: const Color(0xFF246FE0),
+          iconColor: AppColors.subtaskPriorityLow,
           selected: _priority == Priority.low,
         ),
         AnchoredMenuItem(
@@ -2808,7 +2817,8 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
             },
           ),
         // Botão de adição
-        GestureDetector(
+        // GESTURE-OLD: GestureDetector sem feedback visual
+        Pressable(
           onTap: _addSubtask,
           behavior: HitTestBehavior.opaque,
           child: Padding(

@@ -218,19 +218,9 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
     ));
   }
 
-  Color _priorityColor(SubtaskPriority? p) => switch (p) {
-    SubtaskPriority.high => AppColors.priorityHigh,
-    SubtaskPriority.medium => AppColors.priorityMedium,
-    SubtaskPriority.low => AppColors.priorityLow,
-    null => AppColors.textTertiary,
-  };
-
-  String _priorityLabel(SubtaskPriority? p) => switch (p) {
-    SubtaskPriority.high => 'P1',
-    SubtaskPriority.medium => 'P2',
-    SubtaskPriority.low => 'P3',
-    null => 'Sem prioridade',
-  };
+  // PRIORITY-CENTRAL-OLD: _priorityColor/_priorityLabel locais, não
+  // referenciados (só em código comentado) — removidos. Usar
+  // SubtaskPriorityExtension (lib/models/subtask.dart) se precisar: p?.color/p?.label.
 
   Future<void> _showPriorityMenu() async {
     final result = await showAnchoredSelectMenu(

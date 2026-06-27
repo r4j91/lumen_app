@@ -22,6 +22,7 @@ import '../widgets/task_tile.dart';
 import 'quick_add_task_sheet.dart';
 import 'task_detail_sheet.dart';
 import '../widgets/scroll_fade_overlay.dart';
+import '../widgets/pressable.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
@@ -386,7 +387,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
+                  // GESTURE-OLD: GestureDetector sem feedback visual
+                  child: Pressable(
                     onTap: () {
                       Navigator.of(ctx).pop();
                       _setDisplayMode('cards');
@@ -421,7 +423,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 Container(width: 1, height: 36,
                     color: Colors.white.withValues(alpha: 0.08)),
                 Expanded(
-                  child: GestureDetector(
+                  // GESTURE-OLD: GestureDetector sem feedback visual
+                  child: Pressable(
                     onTap: () {
                       Navigator.of(ctx).pop();
                       _setDisplayMode('list');
@@ -661,16 +664,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       final today = DateTime(now.year, now.month, now.day);
       final due = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
       final diff = due.difference(today).inDays;
+      // COLORS-OLD: Color(0xFF7ECC49)/Color(0xFFDC4C3E)/Color(0xFFF0A830)
       final Color color;
       final String label;
       if (diff == 0) {
-        color = const Color(0xFF7ECC49);
+        color = AppColors.dateDueToday;
         label = 'Hoje';
       } else if (diff < 0) {
-        color = const Color(0xFFDC4C3E);
+        color = AppColors.dateOverdue;
         label = '${due.day} ${_ptMonths[due.month - 1]}';
       } else {
-        color = const Color(0xFFF0A830);
+        color = AppColors.dateUpcoming;
         label = '${due.day} ${_ptMonths[due.month - 1]}';
       }
       dateChip = Container(
@@ -765,7 +769,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GestureDetector(
+              // GESTURE-OLD: GestureDetector sem feedback visual
+              Pressable(
                 behavior: HitTestBehavior.opaque,
                 // HAPTIC-OLD: onTap: () => done ? _toggleUndone(_tasks.indexOf(task)) : _toggleDone(_tasks.indexOf(task)),
                 // ANIM-DONE-OLD: sem entrada em _completingTaskIds.
@@ -907,7 +912,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               // não causava conflito real com subtarefas (subtask rows são
               // irmãs fora dessa árvore), mas removido por pedido explícito.
               if (task.hasSubtasks)
-                GestureDetector(
+                // GESTURE-OLD: GestureDetector sem feedback visual
+                Pressable(
                   // behavior: HitTestBehavior.opaque,
                   // HAPTIC-OLD: onTap sem HapticService().selectionClick().
                   onTap: () {
@@ -1037,16 +1043,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       final today = DateTime(now.year, now.month, now.day);
       final due = DateTime(sub.dueDate!.year, sub.dueDate!.month, sub.dueDate!.day);
       final diff = due.difference(today).inDays;
+      // COLORS-OLD: Color(0xFF7ECC49)/Color(0xFFDC4C3E)/Color(0xFFF0A830)
       final Color dotColor;
       final String label;
       if (diff == 0) {
-        dotColor = const Color(0xFF7ECC49);
+        dotColor = AppColors.dateDueToday;
         label = 'Hoje';
       } else if (diff < 0) {
-        dotColor = const Color(0xFFDC4C3E);
+        dotColor = AppColors.dateOverdue;
         label = '${due.day} ${_listSubtaskPtMonths[due.month - 1]}';
       } else {
-        dotColor = const Color(0xFFF0A830);
+        dotColor = AppColors.dateUpcoming;
         label = '${due.day} ${_listSubtaskPtMonths[due.month - 1]}';
       }
       chips.add(_listSubtaskMetaChip(dotColor, label));
@@ -1067,10 +1074,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }
 
   Widget _buildTaskListSubtaskRow(Task task, Subtask sub) {
+    // COLORS-OLD: Color(0xFFDC4C3E)/Color(0xFFEB8909)/Color(0xFF246FE0)
     final priColor = switch (sub.priority) {
-      SubtaskPriority.high => const Color(0xFFDC4C3E),
-      SubtaskPriority.medium => const Color(0xFFEB8909),
-      SubtaskPriority.low => const Color(0xFF246FE0),
+      SubtaskPriority.high => AppColors.subtaskPriorityHigh,
+      SubtaskPriority.medium => AppColors.subtaskPriorityMedium,
+      SubtaskPriority.low => AppColors.subtaskPriorityLow,
       null => AppColors.textTertiary,
     };
     final chips = _listSubtaskChips(sub);
@@ -1088,7 +1096,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
+            // GESTURE-OLD: GestureDetector sem feedback visual
+            Pressable(
               behavior: HitTestBehavior.opaque,
               onTap: () => _toggleSubtaskDone(task, sub),
               child: Container(
@@ -1097,9 +1106,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 margin: const EdgeInsets.only(top: 1, right: 8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: sub.done ? const Color(0xFF22C55E) : priColor.withValues(alpha: 0.08),
+                  // COLORS-OLD: Color(0xFF22C55E)
+                  color: sub.done ? AppColors.success : priColor.withValues(alpha: 0.08),
                   border: Border.all(
-                    color: sub.done ? const Color(0xFF22C55E) : priColor,
+                    color: sub.done ? AppColors.success : priColor,
                     width: 2,
                   ),
                 ),
@@ -1358,7 +1368,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                   child: Builder(
-                    builder: (ctx) => GestureDetector(
+                    // GESTURE-OLD: GestureDetector sem feedback visual
+                    builder: (ctx) => Pressable(
                       onTap: () => _showOptionsMenu(ctx),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -1403,7 +1414,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Builder(
-                  builder: (ctx) => GestureDetector(
+                  // GESTURE-OLD: GestureDetector sem feedback visual
+                  builder: (ctx) => Pressable(
                     onTap: () => _showOptionsMenu(ctx),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),

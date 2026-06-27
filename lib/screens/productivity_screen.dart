@@ -194,6 +194,9 @@ class _ProductivitySheetState extends State<_ProductivitySheet> {
     return 'Bronze';
   }
 
+  // FIXED-COLOR: paleta de níveis de karma (Bronze/Prata/Ouro/Platina) —
+  // cores de medalha com sentido universal, fixas por design, não migram
+  // pra AppColors (mesmo padrão de paleta de etiqueta/projeto).
   Color get _karmaColor {
     if (_karma >= 500) return const Color(0xFF7FD7F0);
     if (_karma >= 200) return const Color(0xFFFFD166);
@@ -408,6 +411,7 @@ class _ProductivitySheetState extends State<_ProductivitySheet> {
               children: [
                 Row(
                   children: [
+                    // FIXED-COLOR: paleta de níveis de karma
                     HugeIcon(icon: HugeIcons.strokeRoundedMedal01, size: 18, color: const Color(0xFFFFD166)),
                     const SizedBox(width: 8),
                     Text('Objetivo diário', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
@@ -696,6 +700,7 @@ class _ProductivitySheetState extends State<_ProductivitySheet> {
               children: [
                 Text('Escala de níveis', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                 const SizedBox(height: 12),
+                // FIXED-COLOR: paleta de níveis de karma
                 ...[
                   ('Bronze',  0,   50,   const Color(0xFFCD7F32)),
                   ('Prata',   50,  200,  const Color(0xFFB0B8C1)),
@@ -823,8 +828,12 @@ class _HorizontalBarChart extends StatelessWidget {
                         width: constraints.maxWidth * ratio,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF4CAF50), Color(0xFF5FD3DC)],
+                          // COLORS-OLD: colors: [Color(0xFF4CAF50), Color(0xFF5FD3DC)]
+                          // 0xFF5FD3DC duplicava AppColors.accent hardcoded —
+                          // quebra ao trocar tema. 0xFF4CAF50 é stop decorativo
+                          // único, sem token equivalente — mantido fixo.
+                          gradient: LinearGradient(
+                            colors: [const Color(0xFF4CAF50), AppColors.accent],
                           ),
                         ),
                       ),

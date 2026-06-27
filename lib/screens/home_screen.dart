@@ -12,6 +12,7 @@ import 'productivity_screen.dart' show showProductivitySheet;
 import 'project_detail_screen.dart';
 import 'task_detail_sheet.dart';
 import '../widgets/scroll_fade_overlay.dart';
+import '../widgets/pressable.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../utils/project_icons.dart';
 
@@ -343,7 +344,8 @@ class HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
         children: [
-          GestureDetector(
+          // GESTURE-OLD: GestureDetector sem feedback visual
+          Pressable(
             onTap: () => showProductivitySheet(context),
             child: UserPill(email: email, apelido: apelido, nome: nome, avatarPath: avatarPath),
           ),
@@ -353,7 +355,7 @@ class HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                GestureDetector(
+                Pressable(
                   onTap: () => NotificationsSheet.show(context),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -361,7 +363,7 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Container(width: 1, height: 18, color: AppColors.textTertiary.withValues(alpha: 0.2)),
-                GestureDetector(
+                Pressable(
                   onTap: () => SettingsSheet.show(context),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -437,19 +439,11 @@ class HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(20),
       );
 
-  static const _overdueColor = Color(0xFFEF4444);
+  // COLORS-OLD: static const _overdueColor = Color(0xFFEF4444);
+  static const _overdueColor = AppColors.overdue;
 
-  Color _priorityColor(Priority p) => switch (p) {
-        Priority.high => AppColors.priorityHigh,
-        Priority.medium => AppColors.priorityMedium,
-        Priority.low => AppColors.priorityLow,
-      };
-
-  String _priorityLabel(Priority p) => switch (p) {
-        Priority.high => 'P1',
-        Priority.medium => 'P2',
-        Priority.low => 'P3',
-      };
+  // PRIORITY-CENTRAL-OLD: _priorityColor/_priorityLabel locais — movidos
+  // pra PriorityExtension em lib/models/task.dart.
 
   String _formatOverdueDate(DateTime date) {
     final today = DateTime.now();
@@ -472,24 +466,25 @@ class HomeScreenState extends State<HomeScreen> {
         // HOME-SPACING-V1
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.all(16),
+        // COLORS-OLD: const Color(0xFF22C55E) em todo este bloco
         decoration: BoxDecoration(
-          color: const Color(0xFF22C55E).withValues(alpha: 0.08),
+          color: AppColors.success.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.2)),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
             Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(color: const Color(0xFF22C55E).withValues(alpha: 0.15), shape: BoxShape.circle),
-              child: const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 20, color: Color(0xFF22C55E)),
+              decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.15), shape: BoxShape.circle),
+              child: const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 20, color: AppColors.success),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Tudo em dia!', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF22C55E))),
+                const Text('Tudo em dia!', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.success)),
                 Text('Nenhuma tarefa atrasada', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.45))),
               ],
             ),
@@ -550,7 +545,7 @@ class HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
-                      color: _priorityColor(task.priority!).withValues(alpha: 0.15),
+                      color: task.priority!.color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -559,12 +554,12 @@ class HomeScreenState extends State<HomeScreen> {
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: BoxDecoration(color: _priorityColor(task.priority!), shape: BoxShape.circle),
+                          decoration: BoxDecoration(color: task.priority!.color, shape: BoxShape.circle),
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _priorityLabel(task.priority!),
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: _priorityColor(task.priority!)),
+                          task.priority!.label,
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: task.priority!.color),
                         ),
                       ],
                     ),
@@ -576,7 +571,8 @@ class HomeScreenState extends State<HomeScreen> {
                   )),
               const Spacer(),
               // HOME-OVERDUE-OLD: width/height: 36
-              GestureDetector(
+              // GESTURE-OLD: GestureDetector sem feedback visual
+              Pressable(
                 onTap: () => showTaskDetailSheet(context, task, onSaved: _loadTasks),
                 child: Container(
                   // HOME-OVERDUE-V1
@@ -647,7 +643,8 @@ class HomeScreenState extends State<HomeScreen> {
               Text(
                 '$percent%',
                 // HOME-TODAY-V1
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF22C55E)),
+                // COLORS-OLD: color: Color(0xFF22C55E)
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.success),
               ),
               const SizedBox(width: 4),
               Text('concluídas', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
@@ -660,7 +657,8 @@ class HomeScreenState extends State<HomeScreen> {
             child: LinearProgressIndicator(
               value: _todayTotal > 0 ? _todayDone / _todayTotal : 0,
               backgroundColor: Colors.white.withValues(alpha: 0.08),
-              valueColor: const AlwaysStoppedAnimation(Color(0xFF22C55E)),
+              // COLORS-OLD: AlwaysStoppedAnimation(Color(0xFF22C55E))
+              valueColor: const AlwaysStoppedAnimation(AppColors.success),
               // HOME-TODAY-OLD: minHeight: 6
               minHeight: 3.0,
             ),
@@ -693,7 +691,8 @@ class HomeScreenState extends State<HomeScreen> {
               icon: HugeIcons.strokeRoundedInbox,
               label: 'Inbox',
               count: _inboxCount,
-              color: const Color(0xFF246FE0),
+              // COLORS-OLD: color: const Color(0xFF246FE0)
+              color: AppColors.shortcutInbox,
               onTap: () => widget.onNavigateToTab?.call(1),
             ),
           ),
@@ -704,7 +703,8 @@ class HomeScreenState extends State<HomeScreen> {
               icon: HugeIcons.strokeRoundedCalendar01,
               label: 'Hoje',
               count: _todayTotal,
-              color: const Color(0xFF22C55E),
+              // COLORS-OLD: color: const Color(0xFF22C55E)
+              color: AppColors.shortcutToday,
               onTap: () => widget.onNavigateToTab?.call(2),
             ),
           ),
@@ -715,7 +715,8 @@ class HomeScreenState extends State<HomeScreen> {
               icon: HugeIcons.strokeRoundedClock01,
               label: 'Em breve',
               count: _upcomingCount,
-              color: const Color(0xFFEB8909),
+              // COLORS-OLD: color: const Color(0xFFEB8909)
+              color: AppColors.shortcutUpcoming,
               onTap: () => widget.onNavigateToTab?.call(3),
             ),
           ),
@@ -726,7 +727,8 @@ class HomeScreenState extends State<HomeScreen> {
               icon: HugeIcons.strokeRoundedFilterHorizontal,
               label: 'Filtros',
               count: _filterCount,
-              color: const Color(0xFF884DFF),
+              // COLORS-OLD: color: const Color(0xFF884DFF)
+              color: AppColors.shortcutFilters,
               onTap: () => widget.onNavigateToTab?.call(4),
             ),
           ),
@@ -744,7 +746,8 @@ class HomeScreenState extends State<HomeScreen> {
   }) {
     // GRID-OVERFLOW-OLD: sem padding vertical explícito + linha "tarefas"
     // extra — altura total não cabia no aspect ratio default do GridView.
-    return GestureDetector(
+    // GESTURE-OLD: GestureDetector sem feedback visual
+    return Pressable(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
@@ -804,7 +807,8 @@ class HomeScreenState extends State<HomeScreen> {
               children: [
                 Text('Projetos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                 const Spacer(),
-                GestureDetector(
+                // GESTURE-OLD: GestureDetector sem feedback visual
+                Pressable(
                   // VERTODOS-FIX: agora alterna expandir/colapsar lista de
                   // projetos inline, como um menu — sem tela de destino.
                   onTap: () {
@@ -859,7 +863,8 @@ class HomeScreenState extends State<HomeScreen> {
   // na home. Mesmo padrão de browse_screen._showProjectOptions: Navigator
   // root + ModalSheetRoute + ProjectOptionsSheet, não duplicado.
   Widget _buildProjectRow(_HomeProject p) {
-    return GestureDetector(
+    // GESTURE-OLD: GestureDetector sem feedback visual
+    return Pressable(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => ProjectDetailScreen(projectId: p.id, projectName: p.name),

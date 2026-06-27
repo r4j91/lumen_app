@@ -49,7 +49,8 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
   late FixedExtentScrollController _hourCtrl;
   late FixedExtentScrollController _minCtrl;
 
-  static const _kBg = Color(0xFF1A1B1E);
+  // COLORS-OLD: static const _kBg = Color(0xFF1A1B1E);
+  static Color get _kBg => AppColors.background;
 
   @override
   void initState() {
@@ -153,8 +154,9 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
             color: Colors.transparent,
             child: Container(
               width: 220,
+              // COLORS-OLD: color: const Color(0xFF2C2D33)
               decoration: BoxDecoration(
-                color: const Color(0xFF2C2D33),
+                color: AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
@@ -354,10 +356,12 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
     final nextMonday = _nextWeekday(DateTime.monday);
 
     final shortcuts = [
+      // COLORS-OLD: Color(0xFFF5A623)/Color(0xFF4D9FEC)/Color(0xFFB18CF5) — duplicavam priorityMedium/priorityLow/tagPurple
+      // 0xFF3BAA6E sem token equivalente — FIXED-COLOR: acento decorativo único deste shortcut
       (label: 'Hoje', icon: Icons.calendar_today_rounded, color: const Color(0xFF3BAA6E), date: today),
-      (label: 'Amanhã', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF5A623), date: tomorrow),
-      (label: 'Este fim de semana', icon: Icons.weekend_rounded, color: const Color(0xFF4D9FEC), date: weekend),
-      (label: 'Próxima semana', icon: Icons.arrow_forward_rounded, color: const Color(0xFFB18CF5), date: nextMonday),
+      (label: 'Amanhã', icon: Icons.wb_sunny_rounded, color: AppColors.priorityMedium, date: tomorrow),
+      (label: 'Este fim de semana', icon: Icons.weekend_rounded, color: AppColors.priorityLow, date: weekend),
+      (label: 'Próxima semana', icon: Icons.arrow_forward_rounded, color: AppColors.tagPurple, date: nextMonday),
     ];
 
     bool isSameDay(DateTime? a, DateTime b) =>
@@ -503,7 +507,8 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
                 ),
               ),
             ),
-            const Divider(height: 1, color: Color(0xFF2C2D33)),
+            // COLORS-OLD: const Divider(height: 1, color: Color(0xFF2C2D33))
+            Divider(height: 1, color: AppColors.surfaceVariant),
             InkWell(
               onTap: () {
                 HapticService().selectionClick();
@@ -546,7 +551,8 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
               curve: Curves.easeOutCubic,
               child: _timeExpanded ? _buildInlineTimePicker() : const SizedBox.shrink(),
             ),
-            const Divider(height: 1, indent: 54, color: Color(0xFF2C2D33)),
+            // COLORS-OLD: const Divider(height: 1, indent: 54, color: Color(0xFF2C2D33))
+            Divider(height: 1, indent: 54, color: AppColors.surfaceVariant),
             InkWell(
               onTap: _pickRecurrence,
               child: Padding(

@@ -35,7 +35,8 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
   FixedExtentScrollController? _hourCtrl;
   FixedExtentScrollController? _minCtrl;
 
-  static const _kBg = Color(0xFF242529);
+  // COLORS-OLD: static const _kBg = Color(0xFF242529);
+  static Color get _kBg => AppColors.surface;
 
   @override
   void initState() {
@@ -111,11 +112,12 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
     }
   }
 
+  // COLORS-OLD: Color(0xFFDC4C3E)/Color(0xFFEB8909)/Color(0xFF246FE0)/Color(0xFF6B6E76)
   Color _prioColor(SubtaskPriority? p) => switch (p) {
-    SubtaskPriority.high => const Color(0xFFDC4C3E),
-    SubtaskPriority.medium => const Color(0xFFEB8909),
-    SubtaskPriority.low => const Color(0xFF246FE0),
-    null => const Color(0xFF6B6E76),
+    SubtaskPriority.high => AppColors.subtaskPriorityHigh,
+    SubtaskPriority.medium => AppColors.subtaskPriorityMedium,
+    SubtaskPriority.low => AppColors.subtaskPriorityLow,
+    null => AppColors.textTertiary,
   };
 
   @override
@@ -145,7 +147,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
         if (didPop) _apply();
       },
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: _kBg,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -364,7 +366,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                               style: TextStyle(
                                 fontSize: 13,
                                 color: active
-                                    ? const Color(0xFF4D9FEC)
+                                    ? /* FIXED-COLOR: azul de estado "selecionado", coincide com priorityLow por acaso — conceito diferente, não migrado */ const Color(0xFF4D9FEC)
                                     : AppColors.textSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -522,7 +524,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                         HugeIcon(icon: HugeIcons.strokeRoundedClock01,
                           size: 17,
                           color: _dueTime != null
-                              ? const Color(0xFF4D9FEC)
+                              ? /* FIXED-COLOR: azul de estado "selecionado", coincide com priorityLow por acaso — conceito diferente, não migrado */ const Color(0xFF4D9FEC)
                               : AppColors.textTertiary,
                         ),
                         const SizedBox(width: 10),
@@ -542,7 +544,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                           style: TextStyle(
                             fontSize: 13,
                             color: _dueTime != null
-                                ? const Color(0xFF4D9FEC)
+                                ? /* FIXED-COLOR: azul de estado "selecionado", coincide com priorityLow por acaso — conceito diferente, não migrado */ const Color(0xFF4D9FEC)
                                 : AppColors.textTertiary,
                             fontWeight: _dueTime != null
                                 ? FontWeight.w600

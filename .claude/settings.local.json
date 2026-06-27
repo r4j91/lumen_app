@@ -171,7 +171,9 @@
       "Bash(awk -F: '{s+=$2} END {print s}')",
       "Bash(awk -F: '{s+=$2} END{print \"GestureDetector total:\",s}')",
       "Bash(awk -F: '{s+=$2} END{print \"InkWell total:\",s}')",
-      "Bash(awk -F: '{s+=$2} END{print \"Pressable total:\",s}')"
+      "Bash(awk -F: '{s+=$2} END{print \"Pressable total:\",s}')",
+      "Bash(echo \"exit: $?\")",
+      "Bash(awk -F: '$1>=775 && $1<=1320')"
     ],
     "additionalDirectories": [
       "/proc/10836/fd"

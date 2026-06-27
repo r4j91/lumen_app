@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import 'label.dart';
 import 'recurrence.dart';
 import 'subtask.dart';
@@ -6,6 +8,24 @@ export 'label.dart';
 export 'recurrence.dart';
 
 enum Priority { high, medium, low }
+
+// PRIORITY-CENTRAL-V1: extension centralizada — consolida 3 implementações
+// idênticas (home_screen.dart, task_tile.dart, quick_add_task_sheet.dart)
+// que já usavam os mesmos tokens AppColors.priorityHigh/Medium/Low e os
+// mesmos labels 'P1'/'P2'/'P3'.
+extension PriorityExtension on Priority {
+  Color get color => switch (this) {
+        Priority.high => AppColors.priorityHigh,
+        Priority.medium => AppColors.priorityMedium,
+        Priority.low => AppColors.priorityLow,
+      };
+
+  String get label => switch (this) {
+        Priority.high => 'P1',
+        Priority.medium => 'P2',
+        Priority.low => 'P3',
+      };
+}
 
 class Task {
   final String id;

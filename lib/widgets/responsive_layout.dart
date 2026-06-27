@@ -551,6 +551,11 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
 
   static const _spring = SpringDescription(mass: 1, stiffness: 600, damping: 32);
 
+  // NAVBAR-PERF-V1: feature flag pra teste A/B de performance — false por
+  // padrão (blur real é o comportamento atual). Mudar pra true só pra medir
+  // se o BackdropFilter é o gargalo de scroll no iPhone; revertido depois.
+  static const bool _useSimulatedBlur = false;
+
   // Indicator color: enough contrast on both dark and light themes
   Color get _indicatorColor => AppColors.navBar.computeLuminance() > 0.5
       ? AppColors.background   // light theme: tinted background for contrast
@@ -583,10 +588,35 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
+    // NAVBAR-PERF-OLD: sem RepaintBoundary, sigmaX/Y: 24
+    return RepaintBoundary(
+      child: ClipRRect(
       borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+      child: _useSimulatedBlur
+          // NAVBAR-PERF-V1: simulação de blur sem custo de GPU — usado só
+          // pra teste A/B de performance, não é o comportamento padrão.
+          ? Container(
+              decoration: BoxDecoration(
+                color: AppColors.navBar.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(
+                  color: AppColors.textPrimary.withValues(alpha: 0.06),
+                  width: 0.8,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.20),
+                    blurRadius: 20,
+                    spreadRadius: -2,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: _buildPillContent(),
+            )
+          : BackdropFilter(
+        // NAVBAR-PERF-V1: sigma 24->16 — imperceptível em movimento, mais barato
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16, tileMode: TileMode.clamp),
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.navBar.withValues(alpha: 0.88),
@@ -604,60 +634,67 @@ class _LiquidGlassPillState extends State<_LiquidGlassPill>
               ),
             ],
           ),
-          child: LayoutBuilder(builder: (_, constraints) {
-            final itemWidth = constraints.maxWidth / widget.items.length;
-            const inset = 5.0;
-
-            // Set initial position on first layout without animation
-            if (!_laid || _itemWidth != itemWidth) {
-              _itemWidth = itemWidth;
-              _laid = true;
-              _ctrl.value = widget.selectedIndex * itemWidth;
-            }
-
-            return Stack(
-              children: [
-                // Spring-animated active indicator
-                AnimatedBuilder(
-                  animation: _ctrl,
-                  builder: (ctx, child) => Positioned(
-                    left: _ctrl.value + inset,
-                    top: inset,
-                    bottom: inset,
-                    width: itemWidth - inset * 2,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: _indicatorColor,
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                    ),
-                  ),
-                ),
-                // Nav items
-                Row(
-                  children: widget.items
-                      .asMap()
-                      .entries
-                      .map((e) => Expanded(
-                            child: _PillItem(
-                              icon: e.value.icon,
-                              iconBuilder: e.value.iconBuilder,
-                              label: e.value.label,
-                              selected: widget.selectedIndex == e.key,
-                              onTap: () {
-                                HapticService().tabChanged();
-                                widget.onSelected(e.key);
-                              },
-                            ),
-                          ))
-                      .toList(),
-                ),
-              ],
-            );
-          }),
+          child: _buildPillContent(),
         ),
       ),
+      ),
     );
+  }
+
+  // NAVBAR-PERF-V1: extraído pra ser compartilhado entre o ramo com
+  // BackdropFilter real e o ramo simulado (_useSimulatedBlur).
+  Widget _buildPillContent() {
+    return LayoutBuilder(builder: (_, constraints) {
+      final itemWidth = constraints.maxWidth / widget.items.length;
+      const inset = 5.0;
+
+      // Set initial position on first layout without animation
+      if (!_laid || _itemWidth != itemWidth) {
+        _itemWidth = itemWidth;
+        _laid = true;
+        _ctrl.value = widget.selectedIndex * itemWidth;
+      }
+
+      return Stack(
+        children: [
+          // Spring-animated active indicator
+          AnimatedBuilder(
+            animation: _ctrl,
+            builder: (ctx, child) => Positioned(
+              left: _ctrl.value + inset,
+              top: inset,
+              bottom: inset,
+              width: itemWidth - inset * 2,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _indicatorColor,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+              ),
+            ),
+          ),
+          // Nav items
+          Row(
+            children: widget.items
+                .asMap()
+                .entries
+                .map((e) => Expanded(
+                      child: _PillItem(
+                        icon: e.value.icon,
+                        iconBuilder: e.value.iconBuilder,
+                        label: e.value.label,
+                        selected: widget.selectedIndex == e.key,
+                        onTap: () {
+                          HapticService().tabChanged();
+                          widget.onSelected(e.key);
+                        },
+                      ),
+                    ))
+                .toList(),
+          ),
+        ],
+      );
+    });
   }
 }
 

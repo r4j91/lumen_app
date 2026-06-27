@@ -60,6 +60,9 @@ class _Project {
     required this.name,
     required this.favorite,
     required this.taskCount,
+    // FIXED-COLOR: default param precisa ser const — AppColors.accent é
+    // getter (não-const), não pode ser usado aqui. Valor duplicado de
+    // propósito (igual ao accent do tema graphite), mantido fixo.
     this.color = const Color(0xFF5FD3DC),
   });
 }
@@ -179,6 +182,8 @@ class _BrowseHomeState extends State<_BrowseHome> {
     }
   }
 
+  // FIXED-COLOR: paleta de seleção de cor de projeto — fixa por definição,
+  // não migra pra AppColors (regra explícita).
   static const _colorPalette = [
     Color(0xFF5FD3DC), Color(0xFF4D9FEC), Color(0xFFB18CF5), Color(0xFF8FD46B),
     Color(0xFFF5A623), Color(0xFFEF5A5F), Color(0xFFFF85A1), Color(0xFF64D8A0),
@@ -689,6 +694,7 @@ class _ProjectRow extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                // FIXED-COLOR: dourado decorativo único de "favorito"
                 child: Icon(
                   project.favorite ? Icons.star_rounded : Icons.star_border_rounded,
                   size: 17,
@@ -945,7 +951,8 @@ class _ProfileCard extends StatelessWidget {
         ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
         : display.substring(0, display.length.clamp(0, 2)).toUpperCase();
 
-    return GestureDetector(
+    // GESTURE-OLD: GestureDetector sem feedback visual
+    return Pressable(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -1253,9 +1260,10 @@ class _NewProjectSheetState extends State<_NewProjectSheet> {
     final kh = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: kh),
+      // COLORS-OLD: color: Color(0xFF242529)
       child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF242529),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: EdgeInsets.fromLTRB(20, 16, 20, kh > 0 ? 16 : 36),
@@ -1266,8 +1274,9 @@ class _NewProjectSheetState extends State<_NewProjectSheet> {
             Center(
               child: Container(
                 width: 36, height: 4,
+                // COLORS-OLD: color: const Color(0xFF6B6E76).withValues(alpha: 0.4)
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6B6E76).withValues(alpha: 0.4),
+                  color: AppColors.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1298,7 +1307,8 @@ class _NewProjectSheetState extends State<_NewProjectSheet> {
               runSpacing: 10,
               children: widget.colorPalette.map((c) {
                 final selected = c == _selectedColor;
-                return GestureDetector(
+                // GESTURE-OLD: GestureDetector sem feedback visual
+                return Pressable(
                   onTap: () {
                     HapticService().selectionClick();
                     setState(() => _selectedColor = c);

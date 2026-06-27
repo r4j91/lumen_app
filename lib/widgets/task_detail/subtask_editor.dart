@@ -94,12 +94,9 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
     }
   }
 
-  Color _priorityColor(SubtaskPriority? p) => switch (p) {
-    SubtaskPriority.high   => AppColors.priorityHigh,
-    SubtaskPriority.medium => AppColors.priorityMedium,
-    SubtaskPriority.low    => AppColors.priorityLow,
-    null                   => AppColors.textTertiary,
-  };
+  // PRIORITY-CENTRAL-OLD: _priorityColor local — movido pra
+  // SubtaskPriorityExtension em lib/models/subtask.dart.
+  Color _priorityColor(SubtaskPriority? p) => p?.color ?? AppColors.textTertiary;
 
   void _showOptionsSheet() {
     HapticService().lightImpact();
