@@ -9,6 +9,7 @@ import '../services/section_repository.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
 import '../widgets/anchored_select_menu.dart';
+import 'package:hugeicons/hugeicons.dart';
 // CORRIGIDO_ETAPA3B_PARCELAS
 import '../widgets/installment_generator_sheet.dart';
 import '../widgets/popover_style.dart';
@@ -850,8 +851,7 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
                             color: AppColors.background,
                           ),
                         )
-                      : Icon(
-                          Icons.arrow_upward_rounded,
+                      : HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01,
                           size: 18,
                           color: hasTitle
                               ? AppColors.background

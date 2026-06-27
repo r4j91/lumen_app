@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/haptic_service.dart';
 import '../../../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class LabelOption {
   final String id;
@@ -81,7 +82,7 @@ class _TaskLabelsPickerSheetState extends State<TaskLabelsPickerSheet> {
                     ),
                     title: Text(l.name, style: TextStyle(fontSize: 16, color: AppColors.textPrimary,
                         fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),
-                    trailing: selected ? Icon(Icons.check, size: 18, color: l.color) : null,
+                    trailing: selected ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 18, color: l.color) : null,
                     dense: true,
                     visualDensity: const VisualDensity(horizontal: 0, vertical: -1),
                     onTap: () => _toggle(l.id),

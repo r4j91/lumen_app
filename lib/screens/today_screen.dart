@@ -14,6 +14,8 @@ import '../services/notification_service.dart';
 import '../services/task_repository.dart';
 import '../services/supabase_client.dart';
 import 'task_detail_sheet.dart';
+import '../widgets/scroll_fade_overlay.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 const _kShowCompletedKey = 'today_show_completed';
 
@@ -346,7 +348,7 @@ class TodayScreenState extends State<TodayScreen> {
                   shape: BoxShape.circle,
                   color: AppColors.surfaceVariant,
                 ),
-                child: Icon(Icons.wifi_off_outlined, size: 34, color: AppColors.textTertiary),
+                child: HugeIcon(icon: HugeIcons.strokeRoundedWifiOff01, size: 34, color: AppColors.textTertiary),
               ),
               const SizedBox(height: 20),
               Text(
@@ -396,7 +398,7 @@ class TodayScreenState extends State<TodayScreen> {
       color: AppColors.accent,
       backgroundColor: AppColors.surface,
       onRefresh: _loadTasks,
-      child: CustomScrollView(
+      child: ScrollFadeOverlay(child: CustomScrollView(
       controller: _scrollCtrl,
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
@@ -419,7 +421,7 @@ class TodayScreenState extends State<TodayScreen> {
                 ),
                 Builder(
                   builder: (ctx) => IconButton(
-                    icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textSecondary),
                     onPressed: () => _showOptionsMenu(ctx),
                     tooltip: 'Opções',
                   ),
@@ -580,7 +582,7 @@ class TodayScreenState extends State<TodayScreen> {
 
         SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
       ],
-    ));
+    )));
   }
 
   String _formatDate(DateTime date) =>

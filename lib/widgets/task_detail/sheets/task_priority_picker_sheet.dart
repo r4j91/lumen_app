@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/task.dart';
 import '../../../services/haptic_service.dart';
 import '../../../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class TaskPriorityPickerSheet extends StatelessWidget {
   final Priority? current;
@@ -50,7 +51,7 @@ class TaskPriorityPickerSheet extends StatelessWidget {
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
               leading: Icon(opt.icon, size: 20, color: opt.color),
               title: Text(opt.label, style: TextStyle(fontSize: 16, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
-              trailing: current == opt.value ? Icon(Icons.check, size: 18, color: opt.color) : null,
+              trailing: current == opt.value ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 18, color: opt.color) : null,
               dense: true,
               visualDensity: const VisualDensity(horizontal: 0, vertical: -1),
               onTap: () {

@@ -8,6 +8,7 @@ import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import 'popover_style.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // ── Public entry-point ────────────────────────────────────────────────────────
 
@@ -489,7 +490,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
   //           padding: const EdgeInsets.fromLTRB(10, 12, 16, 12),
   //           child: Row(
   //             children: [
-  //               Icon(Icons.chevron_left, size: 20, color: AppColors.textSecondary),
+  //               HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, size: 20, color: AppColors.textSecondary),
   //               const SizedBox(width: 2),
   //               Text(
   //                 _subTitle ?? '',
@@ -596,7 +597,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
             padding: const EdgeInsets.fromLTRB(10, 12, 16, 12),
             child: Row(
               children: [
-                Icon(Icons.chevron_left, size: 20, color: AppColors.textSecondary),
+                HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, size: 20, color: AppColors.textSecondary),
                 const SizedBox(width: 2),
                 Text(
                   page.title ?? '',
@@ -691,9 +692,9 @@ class _MenuRow extends StatelessWidget {
                   ),
                 ),
                 if (item.selected)
-                  Icon(Icons.check, size: 15, color: iconFg)
+                  HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 15, color: iconFg)
                 else if (item.hasSubMenu || item.hasArrow)
-                  Icon(Icons.chevron_right,
+                  HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                       size: 16, color: AppColors.textTertiary),
               ],
             ),

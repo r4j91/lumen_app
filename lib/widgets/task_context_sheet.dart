@@ -4,6 +4,7 @@ import '../models/task.dart';
 import '../services/haptic_service.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // ── Public entry-point ────────────────────────────────────────────────────────
 
@@ -208,14 +209,14 @@ class _TaskContextSheet extends StatelessWidget {
           _SheetTile(
             icon: Icons.flag_outlined,
             label: 'Prioridade',
-            trailing: Icon(Icons.chevron_right,
+            trailing: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                 size: 18, color: AppColors.textTertiary),
             onTap: () => _showPrioritySheet(context),
           ),
           _SheetTile(
             icon: Icons.folder_outlined,
             label: 'Mover para projeto',
-            trailing: Icon(Icons.chevron_right,
+            trailing: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                 size: 18, color: AppColors.textTertiary),
             onTap: () => _showProjectSheet(context),
           ),
@@ -356,7 +357,7 @@ class _PrioritySheet extends StatelessWidget {
                 ),
               ),
               trailing: _currentValue == opt.value
-                  ? Icon(Icons.check, size: 18, color: AppColors.accent)
+                  ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 18, color: AppColors.accent)
                   : null,
               dense: true,
               visualDensity: const VisualDensity(horizontal: 0, vertical: -1),
@@ -459,7 +460,7 @@ class _ProjectSheet extends StatelessWidget {
                         ),
                       ),
                       trailing: task.project == proj.name
-                          ? Icon(Icons.check, size: 18, color: AppColors.accent)
+                          ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 18, color: AppColors.accent)
                           : null,
                       dense: true,
                       visualDensity:

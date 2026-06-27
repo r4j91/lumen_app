@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/task.dart';
 import '../../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class TaskPriorityCircle extends StatelessWidget {
   final Priority? priority;
@@ -87,8 +88,7 @@ class TaskMetaRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            Icon(
-              Icons.chevron_right,
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
               size: 16,
               color: AppColors.textTertiary.withValues(alpha: 0.5),
             ),

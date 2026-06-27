@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class DesktopTopBar extends StatelessWidget {
   final VoidCallback? onSearch;
@@ -77,7 +78,7 @@ class _SearchButtonState extends State<_SearchButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.search_rounded,
+              HugeIcon(icon: HugeIcons.strokeRoundedSearch01,
                   size: 16, color: AppColors.textSecondary),
               const SizedBox(width: 6),
               Text(
@@ -183,7 +184,7 @@ class _NewTaskButtonState extends State<_NewTaskButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add, size: 16, color: AppColors.background),
+              HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 16, color: AppColors.background),
               const SizedBox(width: 5),
               Text(
                 'Nova tarefa',

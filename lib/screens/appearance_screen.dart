@@ -5,6 +5,7 @@ import '../theme/app_theme_data.dart';
 import '../theme/app_colors.dart';
 import 'app_icon_screen.dart';
 import 'debug_anchored_menu_screen.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class AppearanceScreen extends StatefulWidget {
   const AppearanceScreen({super.key});
@@ -33,7 +34,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.textSecondary),
+          icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, size: 18, color: AppColors.textSecondary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Aparência', style: Theme.of(context).textTheme.titleLarge),
@@ -102,7 +103,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 color: AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(Icons.grid_view_rounded, size: 20, color: AppColors.accent),
+              child: HugeIcon(icon: HugeIcons.strokeRoundedGrid, size: 20, color: AppColors.accent),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -115,7 +116,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textTertiary),
           ],
         ),
       ),
@@ -142,7 +143,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 color: AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(Icons.science_outlined, size: 20, color: AppColors.accent),
+              child: HugeIcon(icon: HugeIcons.strokeRoundedTestTube01, size: 20, color: AppColors.accent),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -155,7 +156,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textTertiary),
           ],
         ),
       ),
@@ -219,8 +220,8 @@ class _ThemeRow extends StatelessWidget {
                     child: FadeTransition(opacity: anim, child: child),
                   ),
                   child: selected
-                      ? Icon(Icons.check_circle_rounded, key: ValueKey(true), size: 20, color: AppColors.accent)
-                      : Icon(Icons.circle_outlined, key: ValueKey(false), size: 20, color: AppColors.textTertiary),
+                      ? HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle01, key: ValueKey(true), size: 20, color: AppColors.accent)
+                      : HugeIcon(icon: HugeIcons.strokeRoundedCircle, key: ValueKey(false), size: 20, color: AppColors.textTertiary),
                 ),
               ],
             ),

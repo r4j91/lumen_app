@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 final _kColors = [
   '#63C7D8', // Ocean Mist
@@ -105,7 +106,7 @@ class _LabelsScreenState extends State<LabelsScreen> {
         title: const Text('Gerenciar Etiquetas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: Icon(Icons.add, color: AppColors.accent),
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.accent),
             onPressed: () => _showEditor(),
           ),
         ],
@@ -117,7 +118,7 @@ class _LabelsScreenState extends State<LabelsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.label_outline, size: 52, color: AppColors.textTertiary),
+                      HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 52, color: AppColors.textTertiary),
                       const SizedBox(height: 12),
                       Text('Nenhuma etiqueta ainda', style: TextStyle(color: AppColors.textSecondary, fontSize: 15, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
@@ -133,17 +134,17 @@ class _LabelsScreenState extends State<LabelsScreen> {
                     final l = _labels[i];
                     final color = AppColors.parseHex(l.color);
                     return ListTile(
-                      leading: Icon(Icons.label_outline, size: 22, color: color),
+                      leading: HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 22, color: color),
                       title: Text(l.name, style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
+                            icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit01, size: 18, color: AppColors.textSecondary),
                             onPressed: () => _showEditor(existing: l),
                           ),
                           IconButton(
-                            icon: Icon(Icons.delete_outline, size: 18, color: AppColors.priorityHigh),
+                            icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete01, size: 18, color: AppColors.priorityHigh),
                             onPressed: () => _deleteLabel(l),
                           ),
                         ],
@@ -244,7 +245,7 @@ class _LabelEditorSheetState extends State<_LabelEditorSheet> {
           // Preview
           Row(
             children: [
-              Icon(Icons.label_outline, size: 20, color: AppColors.parseHex(_selectedColor)),
+              HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 20, color: AppColors.parseHex(_selectedColor)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -330,7 +331,7 @@ class _ColorGrid extends StatelessWidget {
               border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
               boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 6)] : null,
             ),
-            child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+            child: isSelected ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 14, color: Colors.white) : null,
           ),
         );
       }).toList(),

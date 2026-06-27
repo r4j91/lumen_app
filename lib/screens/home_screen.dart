@@ -11,6 +11,9 @@ import 'browse_screen.dart' show UserPill, HeaderLiquidPill, SettingsSheet, Noti
 import 'productivity_screen.dart' show showProductivitySheet;
 import 'project_detail_screen.dart';
 import 'task_detail_sheet.dart';
+import '../widgets/scroll_fade_overlay.dart';
+import 'package:hugeicons/hugeicons.dart';
+import '../utils/project_icons.dart';
 
 class _HomeProject {
   final String id;
@@ -28,28 +31,9 @@ class _HomeProject {
   });
 }
 
-// ICON-OLD: sem mapeamento de ícone — _ProjectRow só usava
-// Icons.folder_rounded fixo.
-IconData _iconFromName(String? name) {
-  switch (name) {
-    case 'work': return Icons.work_rounded;
-    case 'home': return Icons.home_rounded;
-    case 'school': return Icons.school_rounded;
-    case 'fitness': return Icons.fitness_center_rounded;
-    case 'shopping': return Icons.shopping_cart_rounded;
-    case 'favorite': return Icons.favorite_rounded;
-    case 'star': return Icons.star_rounded;
-    case 'rocket': return Icons.rocket_launch_rounded;
-    case 'lightbulb': return Icons.lightbulb_rounded;
-    case 'music': return Icons.music_note_rounded;
-    case 'travel': return Icons.travel_explore_rounded;
-    case 'money': return Icons.attach_money_rounded;
-    case 'health': return Icons.health_and_safety_rounded;
-    case 'code': return Icons.code_rounded;
-    case 'art': return Icons.brush_rounded;
-    default: return Icons.folder_rounded;
-  }
-}
+// PROJECT-ICONS-OLD: _iconFromName(name) -> IconData Material, switch local
+// — movido pra ProjectIcons.resolve(name) (lib/utils/project_icons.dart),
+// mesmas chaves, agora resolvendo pra Hugeicons.
 
 class HomeScreen extends StatefulWidget {
   // Callback pra trocar de tab no RootScreen (main.dart) — mesmo padrão
@@ -87,6 +71,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   List<_HomeProject> _projects = [];
   bool _loadingProjects = true;
+  bool _projectsExpanded = true;
 
   @override
   void initState() {
@@ -304,7 +289,8 @@ class HomeScreenState extends State<HomeScreen> {
                 ]);
               },
               color: AppColors.accent,
-              child: CustomScrollView(
+              child: ScrollFadeOverlay(
+                child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
@@ -313,7 +299,8 @@ class HomeScreenState extends State<HomeScreen> {
                       children: [
                         _buildHeader(),
                         _buildGreeting(),
-                        const SizedBox(height: 4),
+                        // HOME-SPACING-OLD: SizedBox(height: 4)
+                        const SizedBox(height: 8),
                         if (_loadingTasks)
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 24),
@@ -323,7 +310,8 @@ class HomeScreenState extends State<HomeScreen> {
                           _buildOverdueCard(),
                           _buildTodayCard(),
                         ],
-                        const SizedBox(height: 4),
+                        // HOME-SPACING-OLD: SizedBox(height: 4)
+                        const SizedBox(height: 8),
                         _buildShortcutsGrid(),
                         _buildProjectsList(),
                       ],
@@ -331,6 +319,7 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                   SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
                 ],
+              ),
               ),
             ),
     );
@@ -368,7 +357,7 @@ class HomeScreenState extends State<HomeScreen> {
                   onTap: () => NotificationsSheet.show(context),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Icon(Icons.notifications_outlined, size: 22, color: AppColors.textSecondary),
+                    child: HugeIcon(icon: HugeIcons.strokeRoundedNotification01, size: 22, color: AppColors.textSecondary),
                   ),
                 ),
                 Container(width: 1, height: 18, color: AppColors.textTertiary.withValues(alpha: 0.2)),
@@ -376,7 +365,7 @@ class HomeScreenState extends State<HomeScreen> {
                   onTap: () => SettingsSheet.show(context),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Icon(Icons.settings_outlined, size: 22, color: AppColors.textSecondary),
+                    child: HugeIcon(icon: HugeIcons.strokeRoundedSettings01, size: 22, color: AppColors.textSecondary),
                   ),
                 ),
               ],
@@ -478,8 +467,10 @@ class HomeScreenState extends State<HomeScreen> {
   Widget _buildOverdueCard() {
     final task = _overdueTask;
     if (task == null) {
+      // HOME-OVERDUE-OLD: margin EdgeInsets.fromLTRB(16, 16, 16, 0)
       return Container(
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        // HOME-SPACING-V1
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF22C55E).withValues(alpha: 0.08),
@@ -492,7 +483,7 @@ class HomeScreenState extends State<HomeScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(color: const Color(0xFF22C55E).withValues(alpha: 0.15), shape: BoxShape.circle),
-              child: const Icon(Icons.check_rounded, size: 20, color: Color(0xFF22C55E)),
+              child: const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 20, color: Color(0xFF22C55E)),
             ),
             const SizedBox(width: 12),
             Column(
@@ -507,40 +498,50 @@ class HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // HOME-OVERDUE-OLD: margin EdgeInsets.fromLTRB(16, 16, 16, 0)
+    // HOME-OVERDUE-OLD: padding EdgeInsets.all(16)
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      // HOME-OVERDUE-V1
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
       decoration: _liquidGlassDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded, size: 12, color: _overdueColor),
+              HugeIcon(icon: HugeIcons.strokeRoundedAlert01, size: 12, color: _overdueColor),
               const SizedBox(width: 6),
+              // HOME-OVERDUE-OLD: fontSize: 11
               Text(
                 'TAREFA ATRASADA',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: _overdueColor),
+                // HOME-OVERDUE-V1
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: _overdueColor),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          // HOME-OVERDUE-OLD: SizedBox(height: 10)
+          const SizedBox(height: 3),
+          // HOME-OVERDUE-OLD: fontSize: 20
           Text(
             task.title,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            // HOME-OVERDUE-V1
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          // HOME-OVERDUE-OLD: SizedBox(height: 8)
+          const SizedBox(height: 4),
           if (task.dueDate != null)
             Row(
               children: [
-                Icon(Icons.calendar_today_rounded, size: 13, color: _overdueColor),
+                HugeIcon(icon: HugeIcons.strokeRoundedCalendar01, size: 13, color: _overdueColor),
                 const SizedBox(width: 4),
-                Text(_formatOverdueDate(task.dueDate!), style: TextStyle(fontSize: 13, color: _overdueColor)),
+                // HOME-OVERDUE-OLD: fontSize: 12
+                Text(_formatOverdueDate(task.dueDate!), style: TextStyle(fontSize: 11, color: _overdueColor)),
               ],
             ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             children: [
               if (task.priority != null)
@@ -574,17 +575,19 @@ class HomeScreenState extends State<HomeScreen> {
                     child: TagChip(label: l.name, color: l.color),
                   )),
               const Spacer(),
+              // HOME-OVERDUE-OLD: width/height: 36
               GestureDetector(
                 onTap: () => showTaskDetailSheet(context, task, onSaved: _loadTasks),
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  // HOME-OVERDUE-V1
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.accent.withValues(alpha: 0.15),
                     border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
                   ),
-                  child: Icon(Icons.arrow_forward_rounded, size: 18, color: AppColors.accent),
+                  child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 14, color: AppColors.accent),
                 ),
               ),
             ],
@@ -598,8 +601,10 @@ class HomeScreenState extends State<HomeScreen> {
   // TODAY-EMPTY-OLD: if (_todayTotal == 0) return const SizedBox.shrink();
   Widget _buildTodayCard() {
     if (_todayTotal == 0) {
+      // HOME-TODAY-OLD: margin EdgeInsets.fromLTRB(16, 12, 16, 0)
       return Container(
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        // HOME-SPACING-V1
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.04),
@@ -608,7 +613,7 @@ class HomeScreenState extends State<HomeScreen> {
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_rounded, size: 18, color: Colors.white.withValues(alpha: 0.3)),
+            HugeIcon(icon: HugeIcons.strokeRoundedCalendar01, size: 18, color: Colors.white.withValues(alpha: 0.3)),
             const SizedBox(width: 12),
             Text('Nenhuma tarefa para hoje', style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.4))),
           ],
@@ -617,46 +622,55 @@ class HomeScreenState extends State<HomeScreen> {
     }
     final percent = ((_todayDone / _todayTotal) * 100).round();
 
+    // HOME-TODAY-OLD: margin EdgeInsets.fromLTRB(16, 12, 16, 0)
+    // HOME-TODAY-OLD: padding EdgeInsets.all(16)
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      // HOME-TODAY-V1
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
       decoration: _liquidGlassDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // HOME-TODAY-OLD: "Hoje" e contagem em Column (linhas separadas)
+          // HOME-TODAY-V1: título e contagem inline
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Hoje', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                  Text('$_todayTotal tarefas', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                ],
+              Text('Hoje', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(
+                ' · $_todayTotal tarefa${_todayTotal == 1 ? '' : 's'}',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               const Spacer(),
+              // HOME-TODAY-OLD: fontSize: 22
               Text(
                 '$percent%',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF22C55E)),
+                // HOME-TODAY-V1
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF22C55E)),
               ),
               const SizedBox(width: 4),
-              Text('\nconcluídas', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              Text('concluídas', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
             ],
           ),
-          const SizedBox(height: 12),
+          // HOME-TODAY-OLD: SizedBox(height: 12)
+          const SizedBox(height: 5),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: _todayTotal > 0 ? _todayDone / _todayTotal : 0,
               backgroundColor: Colors.white.withValues(alpha: 0.08),
               valueColor: const AlwaysStoppedAnimation(Color(0xFF22C55E)),
-              minHeight: 6,
+              // HOME-TODAY-OLD: minHeight: 6
+              minHeight: 3.0,
             ),
           ),
-          const SizedBox(height: 8),
+          // HOME-TODAY-OLD: SizedBox(height: 8)
+          const SizedBox(height: 5),
+          // HOME-TODAY-OLD: fontSize: 12
           Text(
             '$_todayDone concluídas • ${_todayTotal - _todayDone} restantes',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -675,7 +689,8 @@ class HomeScreenState extends State<HomeScreen> {
         children: [
           Expanded(
             child: _buildShortcutItem(
-              icon: Icons.inbox_rounded,
+              // HOME-SHORTCUTS-OLD: icon: Icons.inbox_rounded,
+              icon: HugeIcons.strokeRoundedInbox,
               label: 'Inbox',
               count: _inboxCount,
               color: const Color(0xFF246FE0),
@@ -685,7 +700,8 @@ class HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: _buildShortcutItem(
-              icon: Icons.calendar_today_rounded,
+              // HOME-SHORTCUTS-OLD: icon: Icons.calendar_today_rounded,
+              icon: HugeIcons.strokeRoundedCalendar01,
               label: 'Hoje',
               count: _todayTotal,
               color: const Color(0xFF22C55E),
@@ -695,7 +711,8 @@ class HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: _buildShortcutItem(
-              icon: Icons.schedule_rounded,
+              // HOME-SHORTCUTS-OLD: icon: Icons.schedule_rounded,
+              icon: HugeIcons.strokeRoundedClock01,
               label: 'Em breve',
               count: _upcomingCount,
               color: const Color(0xFFEB8909),
@@ -705,7 +722,8 @@ class HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: _buildShortcutItem(
-              icon: Icons.filter_list_rounded,
+              // HOME-SHORTCUTS-OLD: icon: Icons.filter_list_rounded,
+              icon: HugeIcons.strokeRoundedFilterHorizontal,
               label: 'Filtros',
               count: _filterCount,
               color: const Color(0xFF884DFF),
@@ -718,7 +736,7 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildShortcutItem({
-    required IconData icon,
+    required List<List<dynamic>> icon,
     required String label,
     required int count,
     required Color color,
@@ -739,14 +757,20 @@ class HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // HOME-SHORTCUTS-OLD: Container 40x40, BoxDecoration retangular
+            // com color: color.withValues(alpha: 0.15), borderRadius: 12,
+            // child: Icon(icon, size: 20, color: color)
+            // HOME-SHORTCUTS-V1: bolinha neutra, ícone colorido
             Container(
-              width: 40,
-              height: 40,
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.surface.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 20, color: color),
+              child: Center(
+                child: HugeIcon(icon: icon, size: 14, color: color),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -764,36 +788,69 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   // ── SEÇÃO PROJETOS ───────────────────────────────────
+  // HOME-PROJECTS-OLD: Padding solta, sem container/fundo/borda — seção
+  // visualmente "flutuando" diferente dos cards de tarefa atrasada/hoje.
   Widget _buildProjectsList() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Text('Projetos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              const Spacer(),
-              GestureDetector(
-                // Não há tela de lista completa de projetos separada —
-                // browse_screen.dart ERA essa tela, agora substituída por
-                // esta (HomeScreen). Sem destino, deixado sem ação por ora.
-                onTap: () {},
-                child: Row(
-                  children: [
-                    Text('Ver todos', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    const SizedBox(width: 2),
-                    Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textSecondary),
-                  ],
+      // HOME-SPACING-V1
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      // HOME-PROJECTS-V1: mesmo estilo visual dos cards acima
+      child: Container(
+        decoration: _liquidGlassDecoration,
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Text('Projetos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                const Spacer(),
+                GestureDetector(
+                  // VERTODOS-FIX: agora alterna expandir/colapsar lista de
+                  // projetos inline, como um menu — sem tela de destino.
+                  onTap: () {
+                    HapticService().selectionClick();
+                    setState(() => _projectsExpanded = !_projectsExpanded);
+                  },
+                  child: Row(
+                    children: [
+                      Text(_projectsExpanded ? 'Ver menos' : 'Ver todos', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      const SizedBox(width: 2),
+                      AnimatedRotation(
+                        turns: _projectsExpanded ? 0.25 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 16, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loadingProjects)
+              const Center(child: CupertinoActivityIndicator())
+            else
+              AnimatedSize(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                // VERTODOS-FIX2: "Ver todos" agora é um menu expansível de
+                // fato — colapsado esconde a lista inteira, expandido mostra
+                // todos os projetos (antes só limitava a 6, nunca minimizava).
+                child: _projectsExpanded
+                    ? Column(
+                        children: [
+                          for (int i = 0; i < _projects.length; i++) ...[
+                            if (i > 0)
+                              // HOME-PROJECTS-V1: divisor interno
+                              Divider(height: 1, thickness: 1, color: Colors.white.withValues(alpha: 0.08)),
+                            _buildProjectRow(_projects[i]),
+                          ],
+                        ],
+                      )
+                    : const SizedBox.shrink(),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_loadingProjects)
-            const Center(child: CupertinoActivityIndicator())
-          else
-            ..._projects.take(6).map((p) => _buildProjectRow(p)),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -824,8 +881,10 @@ class HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
+      // HOME-PROJECTS-OLD: padding: EdgeInsets.symmetric(vertical: 8)
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        // HOME-PROJECTS-V1
+        padding: const EdgeInsets.symmetric(vertical: 7),
         child: Row(
           children: [
             Container(
@@ -834,12 +893,14 @@ class HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(color: p.color, borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(width: 12),
+            // PROJECT-SIZE-OLD: width: 36, height: 36, borderRadius: 9, HugeIcon size: 18
+            // PROJECT-SIZE-V2
             Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(color: p.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-              // ICON-OLD: child: Icon(Icons.folder_rounded, size: 18, color: p.color),
-              child: Icon(_iconFromName(p.iconName), size: 18, color: p.color),
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(color: p.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(7)),
+              // PROJECT-ICONS-OLD: child: Icon(_iconFromName(p.iconName), size: 18, color: p.color),
+              child: HugeIcon(icon: ProjectIcons.resolve(p.iconName), size: 14, color: p.color),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -848,7 +909,7 @@ class HomeScreenState extends State<HomeScreen> {
             if (p.taskCount > 0)
               Text('${p.taskCount}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textSecondary.withValues(alpha: 0.5)),
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 16, color: AppColors.textSecondary.withValues(alpha: 0.5)),
           ],
         ),
       ),

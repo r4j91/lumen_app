@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions, UserAttributes;
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // Tela de edição de perfil — acessível via ProductivitySheet ou Settings
 class ProfileEditScreen extends StatefulWidget {
@@ -63,18 +64,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             children: [
               if (!kIsWeb)
                 ListTile(
-                  leading: Icon(Icons.camera_alt_outlined, color: AppColors.accent),
+                  leading: HugeIcon(icon: HugeIcons.strokeRoundedCamera01, color: AppColors.accent),
                   title: Text('Câmera', style: TextStyle(color: AppColors.textPrimary)),
                   onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
                 ),
               ListTile(
-                leading: Icon(Icons.photo_library_outlined, color: AppColors.accent),
+                leading: HugeIcon(icon: HugeIcons.strokeRoundedImage01, color: AppColors.accent),
                 title: Text('Galeria', style: TextStyle(color: AppColors.textPrimary)),
                 onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
               ),
               if (_avatarUrl != null)
                 ListTile(
-                  leading: Icon(Icons.delete_outline, color: AppColors.priorityHigh),
+                  leading: HugeIcon(icon: HugeIcons.strokeRoundedDelete01, color: AppColors.priorityHigh),
                   title: Text('Remover foto', style: TextStyle(color: AppColors.priorityHigh)),
                   onTap: () => Navigator.of(ctx).pop(null),
                 ),
@@ -249,7 +250,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     padding: const EdgeInsets.all(6),
                                     child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
                                   )
-                                : const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                                : const HugeIcon(icon: HugeIcons.strokeRoundedCamera01, size: 14, color: Colors.white),
                           ),
                         ),
                       ],

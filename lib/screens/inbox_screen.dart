@@ -11,6 +11,8 @@ import '../widgets/app_sheet.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/swipeable_task_tile.dart';
 import '../widgets/task_tile.dart';
+import '../widgets/scroll_fade_overlay.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 const _kInboxShowCompletedKey = 'inbox_show_completed';
 
@@ -189,7 +191,7 @@ class InboxScreenState extends State<InboxScreen> {
       color: AppColors.accent,
       backgroundColor: AppColors.surface,
       onRefresh: loadTasks,
-      child: CustomScrollView(
+      child: ScrollFadeOverlay(child: CustomScrollView(
       controller: _scrollCtrl,
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
@@ -214,7 +216,7 @@ class InboxScreenState extends State<InboxScreen> {
                 ),
                 Builder(
                   builder: (ctx) => IconButton(
-                    icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textSecondary),
                     onPressed: () => _showOptionsMenu(ctx),
                     tooltip: 'Opções',
                   ),
@@ -313,6 +315,6 @@ class InboxScreenState extends State<InboxScreen> {
 
         SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
       ],
-    ));
+    )));
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class NotificationsSettingsScreen extends StatefulWidget {
   const NotificationsSettingsScreen({super.key});
@@ -147,7 +148,7 @@ class _NotificationsSettingsScreenState
               color: AppColors.textPrimary),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          icon: const HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, size: 18),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

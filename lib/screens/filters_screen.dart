@@ -10,6 +10,9 @@ import '../widgets/pressable.dart';
 import '../widgets/swipeable_task_tile.dart';
 import '../widgets/task_tile.dart';
 import 'task_detail_sheet.dart';
+import '../widgets/scroll_fade_overlay.dart';
+import '../utils/project_icons.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -21,12 +24,15 @@ class _ProjectStat {
   final int pending;
   final int total;
   final Color color;
+  // FILTERS-ICON-V1: campo novo, mesma chave salva por ProjectOptionsSheet
+  final String? icone;
   const _ProjectStat(
       {required this.id,
       required this.name,
       required this.pending,
       required this.total,
-      required this.color});
+      required this.color,
+      this.icone});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,9 +111,10 @@ class _FiltersScreenState extends State<FiltersScreen> {
             .eq('concluida', true)
             .eq('data_vencimento', todayStr),
         // Projects with task counts
+        // FILTERS-ICON-OLD: select('id, nome, cor, tasks(concluida)')
         supabase
             .from('projects')
-            .select('id, nome, cor, tasks(concluida)')
+            .select('id, nome, cor, icone, tasks(concluida)')
             .order('nome'),
       ]);
 
@@ -119,6 +126,8 @@ class _FiltersScreenState extends State<FiltersScreen> {
           pending: tasks.where((t) => t['concluida'] == false).length,
           total: tasks.length,
           color: _parseProjectColor(r['cor'] as String?),
+          // FILTERS-ICON-V1
+          icone: r['icone'] as String?,
         );
       }).toList();
 
@@ -258,7 +267,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
   Widget _buildDashboard() {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom + 88;
 
-    return CustomScrollView(
+    return ScrollFadeOverlay(child: CustomScrollView(
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         SliverToBoxAdapter(
@@ -368,7 +377,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
 
         SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
       ],
-    );
+    ));
   }
 
   // ── Filter list view ───────────────────────────────────────────────────────
@@ -390,7 +399,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
     };
     final bottomInset = MediaQuery.of(context).viewPadding.bottom + 88;
 
-    return CustomScrollView(
+    return ScrollFadeOverlay(child: CustomScrollView(
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         SliverToBoxAdapter(
@@ -408,8 +417,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
                       color: AppColors.surfaceVariant,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(
-                      Icons.arrow_back_ios_new_rounded,
+                    child: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01,
                       size: 16,
                       color: AppColors.textSecondary,
                     ),
@@ -451,7 +459,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
               padding: const EdgeInsets.symmetric(vertical: 60),
               child: Column(
                 children: [
-                  Icon(Icons.check_circle_outline,
+                  HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02,
                       size: 44, color: AppColors.textTertiary),
                   const SizedBox(height: 12),
                   Text(
@@ -498,7 +506,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
 
         SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
       ],
-    );
+    ));
   }
 }
 
@@ -626,19 +634,19 @@ class _ProjectStatRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
+              // FILTERS-ICON-OLD: width: 34, height: 34, borderRadius: 12,
+              // border branco translúcido, HugeIcons.strokeRoundedPackage
+              // fixo (genérico, não refletia o ícone real do projeto)
               // Icon container — mesmo estilo da aba Navegar
               Container(
-                width: 34,
-                height: 34,
+                // FILTERS-ICON-V1: 28x28 radius 7, igual à home
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.07),
-                    width: 1,
-                  ),
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(7),
                 ),
-                child: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textTertiary),
+                child: HugeIcon(icon: ProjectIcons.resolve(project.icone), size: 14, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(

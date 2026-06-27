@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 /// Standard bottom sheet container with drag handle, title row, and body.
 ///
@@ -201,7 +202,7 @@ class CompletedSectionHeader extends StatelessWidget {
               turns: expanded ? 0.25 : 0,
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeInOut,
-              child: Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
+              child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textTertiary),
             ),
             const SizedBox(width: 6),
             Text(

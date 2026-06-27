@@ -6,6 +6,7 @@ import '../models/subtask.dart';
 import '../models/task.dart';
 import '../services/haptic_service.dart';
 import '../widgets/task_context_menu.dart';
+import 'package:hugeicons/hugeicons.dart';
 // CORRIGIDO_ETAPA3B
 import '../services/label_repository.dart';
 import '../services/section_repository.dart';
@@ -20,6 +21,7 @@ import '../widgets/task_detail/sheets/task_labels_picker_sheet.dart' show LabelO
 import '../widgets/task_tile.dart';
 import 'quick_add_task_sheet.dart';
 import 'task_detail_sheet.dart';
+import '../widgets/scroll_fade_overlay.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
@@ -400,7 +402,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.grid_view_rounded, size: 18,
+                          HugeIcon(icon: HugeIcons.strokeRoundedGrid, size: 18,
                               color: _displayMode == 'cards'
                                   ? AppColors.accent
                                   : Colors.white.withValues(alpha: 0.4)),
@@ -435,7 +437,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.format_list_bulleted_rounded, size: 18,
+                          HugeIcon(icon: HugeIcons.strokeRoundedListView, size: 18,
                               color: _displayMode == 'list'
                                   ? AppColors.accent
                                   : Colors.white.withValues(alpha: 0.4)),
@@ -477,7 +479,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           value: 'add_section',
           child: Row(
             children: [
-              Icon(Icons.add, size: 18, color: Theme.of(context).colorScheme.onSurface),
+              HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 18, color: Theme.of(context).colorScheme.onSurface),
               const SizedBox(width: 10),
               const Text('Nova Seção'),
             ],
@@ -852,7 +854,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         child: Row(
                           children: [
                             if (subtaskTotal > 0) ...[
-                              Icon(Icons.checklist_rounded, size: 12, color: Colors.white.withValues(alpha: 0.35)),
+                              HugeIcon(icon: HugeIcons.strokeRoundedTaskDone01, size: 12, color: Colors.white.withValues(alpha: 0.35)),
                               const SizedBox(width: 3),
                               Text('$subtaskDone/$subtaskTotal', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.35))),
                               const SizedBox(width: 8),
@@ -862,7 +864,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                               const SizedBox(width: 8),
                             ],
                             if (task.commentCount > 0) ...[
-                              Icon(Icons.chat_bubble_outline, size: 12, color: Colors.white.withValues(alpha: 0.3)),
+                              HugeIcon(icon: HugeIcons.strokeRoundedComment01, size: 12, color: Colors.white.withValues(alpha: 0.3)),
                               const SizedBox(width: 3),
                               Text('${task.commentCount}', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.3))),
                             ],
@@ -876,7 +878,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               // if (task.hasSubtasks)
               //   Padding(
               //     padding: const EdgeInsets.only(left: 8, top: 2),
-              //     child: Icon(Icons.chevron_right, size: 18, color: Colors.white.withValues(alpha: 0.3)),
+              //     child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: Colors.white.withValues(alpha: 0.3)),
               //   ),
               // EXPAND-BTN-OLD: padding (left:8, top:2) só — área de toque
               // bem menor que 44x44 (HIG mínimo).
@@ -924,8 +926,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       turns: expanded ? 0.5 : 0,
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOutCubic,
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                      child: HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01,
                         size: 22,
                         color: Colors.white.withValues(alpha: 0.35),
                       ),
@@ -1103,7 +1104,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                   ),
                 ),
                 child: sub.done
-                    ? const Icon(Icons.check_rounded, size: 10, color: Colors.white)
+                    ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 10, color: Colors.white)
                     : null,
               ),
             ),
@@ -1189,7 +1190,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     //       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
     //       child: Row(
     //         children: [
-    //           Icon(Icons.add, size: 16, color: AppColors.textSecondary),
+    //           HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 16, color: AppColors.textSecondary),
     //           const SizedBox(width: 8),
     //           Text('Adicionar tarefa', style: TextStyle(fontSize: 13.5, color: AppColors.textSecondary)),
     //         ],
@@ -1283,7 +1284,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     //       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
     //       child: Row(
     //         children: [
-    //           Icon(Icons.add, size: 16, color: AppColors.textSecondary),
+    //           HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 16, color: AppColors.textSecondary),
     //           const SizedBox(width: 8),
     //           Text('Nova Seção', style: TextStyle(fontSize: 13.5, color: AppColors.textSecondary)),
     //         ],
@@ -1317,7 +1318,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           // Liquid Glass (ClipRRect + BackdropFilter), mesmo _showOptionsMenu.
           // Builder(
           //   builder: (ctx) => IconButton(
-          //     icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+          //     icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textSecondary),
           //     onPressed: () => _showOptionsMenu(ctx),
           //     tooltip: 'Opções',
           //   ),
@@ -1336,7 +1337,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           //     child: Row(
           //       mainAxisSize: MainAxisSize.min,
           //       children: [
-          //         Icon(Icons.format_list_bulleted_rounded,
+          //         HugeIcon(icon: HugeIcons.strokeRoundedListView,
           //              size: 12, color: AppColors.accent),
           //         const SizedBox(width: 4),
           //         Text('Lista', style: TextStyle(
@@ -1372,8 +1373,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.format_list_bulleted_rounded,
+                            HugeIcon(icon: HugeIcons.strokeRoundedListView,
                               size: 16,
                               color: AppColors.accent,
                             ),
@@ -1418,8 +1418,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.more_horiz,
+                          HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal,
                             size: 18,
                             color: Theme.of(ctx).colorScheme.onSurface,
                           ),
@@ -1435,7 +1434,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           // Não é widget compartilhado com outras telas — comentado direto.
           // Lógica preservada, chamável via _openAddTask(null) se necessário.
           // IconButton(
-          //   icon: Icon(Icons.add, color: AppColors.accent),
+          //   icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.accent),
           //   onPressed: () => showQuickAddTaskSheet(context, onSaved: _loadTasks, initialProjectId: widget.projectId),
           //   tooltip: 'Nova tarefa',
           // ),
@@ -1501,7 +1500,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           ),
     ];
 
-    return CustomScrollView(
+    return ScrollFadeOverlay(child: CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
@@ -1514,7 +1513,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           ),
         ),
       ],
-    );
+    ));
   }
 }
 
@@ -1550,7 +1549,7 @@ class _SectionHeader extends StatelessWidget {
               turns: expanded ? 0.25 : 0,
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
-              child: Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary),
+              child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textSecondary),
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -1564,7 +1563,7 @@ class _SectionHeader extends StatelessWidget {
             Text('$count', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
             Builder(
               builder: (ctx) => IconButton(
-                icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textTertiary),
+                icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, size: 18, color: AppColors.textTertiary),
                 onPressed: () => onMenu(ctx),
                 visualDensity: VisualDensity.compact,
               ),

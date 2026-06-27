@@ -18,6 +18,7 @@ import 'productivity_screen.dart';
 import 'profile_screen.dart';
 import 'project_detail_screen.dart';
 import 'search_screen.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // ── Public entry-point ────────────────────────────────────────────────────────
 
@@ -262,7 +263,7 @@ class _BrowseHomeState extends State<_BrowseHome> {
                           onTap: () => NotificationsSheet.show(context),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Icon(Icons.notifications_outlined, size: 22, color: AppColors.textSecondary),
+                            child: HugeIcon(icon: HugeIcons.strokeRoundedNotification01, size: 22, color: AppColors.textSecondary),
                           ),
                         ),
                         Container(width: 1, height: 18, color: AppColors.textTertiary.withValues(alpha: 0.2)),
@@ -270,7 +271,7 @@ class _BrowseHomeState extends State<_BrowseHome> {
                           onTap: _showSettings,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Icon(Icons.settings_outlined, size: 22, color: AppColors.textSecondary),
+                            child: HugeIcon(icon: HugeIcons.strokeRoundedSettings01, size: 22, color: AppColors.textSecondary),
                           ),
                         ),
                       ],
@@ -338,7 +339,7 @@ class _BrowseHomeState extends State<_BrowseHome> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 child: Row(
                   children: [
-                    Icon(Icons.star_border_rounded, size: 15, color: AppColors.textTertiary),
+                    HugeIcon(icon: HugeIcons.strokeRoundedStar, size: 15, color: AppColors.textTertiary),
                     SizedBox(width: 8),
                     Text(
                       'Toque na ⭐ de um projeto para favoritá-lo',
@@ -645,8 +646,7 @@ class _ProjectRow extends StatelessWidget {
                   width: 1,
                 ),
               ),
-              child: Icon(
-                Icons.inventory_2_outlined,
+              child: HugeIcon(icon: HugeIcons.strokeRoundedPackage,
                 size: 16,
                 color: AppColors.textTertiary,
               ),
@@ -701,8 +701,7 @@ class _ProjectRow extends StatelessWidget {
             // Chevron
             Padding(
               padding: const EdgeInsets.only(right: 14),
-              child: Icon(
-                Icons.chevron_right,
+              child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                 size: 15,
                 color: AppColors.textTertiary.withValues(alpha: 0.4),
               ),
@@ -729,7 +728,7 @@ class _EmptyProjects extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(Icons.folder_open_outlined, size: 36, color: AppColors.textTertiary),
+          HugeIcon(icon: HugeIcons.strokeRoundedFolderOpen, size: 36, color: AppColors.textTertiary),
           const SizedBox(height: 10),
           Text(
             'Nenhum projeto ainda',
@@ -744,7 +743,7 @@ class _EmptyProjects extends StatelessWidget {
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onCreate,
-            icon: const Icon(Icons.add, size: 16),
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 16),
             label: const Text('Criar projeto'),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.accent,
@@ -868,7 +867,7 @@ class SettingsSheet extends StatelessWidget {
                     Navigator.of(context, rootNavigator: true).pop();
                     AuthService().signOut();
                   },
-                  icon: const Icon(Icons.logout, size: 16),
+                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedLogout01, size: 16),
                   label: const Text('Sair da conta'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.priorityHigh,
@@ -982,7 +981,7 @@ class _ProfileCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textTertiary),
           ],
         ),
       ),
@@ -1013,7 +1012,7 @@ class _SettingItem extends StatelessWidget {
                 style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
               ),
             ),
-            Icon(Icons.chevron_right, size: 16, color: AppColors.textTertiary),
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 16, color: AppColors.textTertiary),
           ],
         ),
       ),
@@ -1165,7 +1164,7 @@ class NotificationsSheetState extends State<NotificationsSheet> {
               Text('Próximas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
               const Spacer(),
               IconButton(
-                icon: Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, color: AppColors.textSecondary, size: 20),
                 onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
                 visualDensity: VisualDensity.compact,
               ),
@@ -1175,7 +1174,7 @@ class NotificationsSheetState extends State<NotificationsSheet> {
             ? Center(child: CircularProgressIndicator(color: AppColors.accent, strokeWidth: 2))
             : _upcoming.isEmpty
               ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.notifications_none_outlined, size: 48, color: AppColors.textTertiary),
+                  HugeIcon(icon: HugeIcons.strokeRoundedNotification01, size: 48, color: AppColors.textTertiary),
                   const SizedBox(height: 12),
                   Text('Nenhuma notificação agendada', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                 ])
@@ -1190,7 +1189,7 @@ class NotificationsSheetState extends State<NotificationsSheet> {
                         .difference(DateTime(today.year, today.month, today.day)).inDays;
                     final label = diff == null ? '' : diff == 0 ? 'Hoje' : diff == 1 ? 'Amanhã' : 'Em $diff dias';
                     return ListTile(
-                      leading: Icon(Icons.notifications_outlined, color: AppColors.accent, size: 20),
+                      leading: HugeIcon(icon: HugeIcons.strokeRoundedNotification01, color: AppColors.accent, size: 20),
                       title: Text(item['titulo'] ?? '', style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500)),
                       subtitle: label.isNotEmpty ? Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)) : null,
                       dense: true,
@@ -1313,7 +1312,7 @@ class _NewProjectSheetState extends State<_NewProjectSheet> {
                       border: selected ? Border.all(color: Colors.white, width: 2.5) : null,
                       boxShadow: selected ? [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 8)] : null,
                     ),
-                    child: selected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                    child: selected ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 16, color: Colors.white) : null,
                   ),
                 );
               }).toList(),

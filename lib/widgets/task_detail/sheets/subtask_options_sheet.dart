@@ -6,6 +6,7 @@ import '../../../services/subtask_repository.dart';
 import '../../../theme/app_colors.dart';
 import '../subtask_item.dart';
 import 'task_labels_picker_sheet.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class SubtaskOptionsSheet extends StatefulWidget {
   final SubtaskItem item;
@@ -187,8 +188,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(
-                        Icons.close,
+                      icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01,
                         size: 20,
                         color: AppColors.textTertiary,
                       ),
@@ -394,8 +394,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                                 : Colors.transparent,
                           ),
                         ),
-                        child: Icon(
-                          Icons.calendar_month_outlined,
+                        child: HugeIcon(icon: HugeIcons.strokeRoundedCalendar03,
                           size: 16,
                           color: _calendarExpanded
                               ? AppColors.accent
@@ -444,13 +443,11 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
-                            leftChevronIcon: Icon(
-                              Icons.chevron_left,
+                            leftChevronIcon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01,
                               color: AppColors.textSecondary,
                               size: 20,
                             ),
-                            rightChevronIcon: Icon(
-                              Icons.chevron_right,
+                            rightChevronIcon: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                               color: AppColors.textSecondary,
                               size: 20,
                             ),
@@ -522,8 +519,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.access_time_rounded,
+                        HugeIcon(icon: HugeIcons.strokeRoundedClock01,
                           size: 17,
                           color: _dueTime != null
                               ? const Color(0xFF4D9FEC)
@@ -557,8 +553,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                         AnimatedRotation(
                           turns: _timeExpanded ? 0.25 : 0,
                           duration: const Duration(milliseconds: 200),
-                          child: Icon(
-                            Icons.chevron_right,
+                          child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                             size: 17,
                             color: AppColors.textTertiary,
                           ),
@@ -638,7 +633,7 @@ class _SubtaskOptionsSheetState extends State<SubtaskOptionsSheet> {
                               ),
                             ),
                           ),
-                          if (sel) Icon(Icons.check, size: 16, color: l.color),
+                          if (sel) HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 16, color: l.color),
                         ],
                       ),
                     ),

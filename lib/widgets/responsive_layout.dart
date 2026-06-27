@@ -12,6 +12,7 @@ import '../theme/app_spacing.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_sheet.dart';
 import 'desktop_shell/desktop_app_shell.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class _NavItem {
   final IconData? icon;
@@ -335,7 +336,7 @@ class _ExpandableFABState extends State<_ExpandableFAB>
             ],
           ),
           child: Center(
-            child: Icon(Icons.add, size: 27, color: AppColors.background),
+            child: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 27, color: AppColors.background),
           ),
         ),
       ),

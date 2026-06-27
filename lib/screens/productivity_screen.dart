@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/haptic_service.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // SQL para rodar no Supabase antes de usar:
 // ALTER TABLE profiles ADD COLUMN IF NOT EXISTS apelido text;
@@ -274,7 +275,7 @@ class _ProductivitySheetState extends State<_ProductivitySheet> {
                 color: AppColors.surfaceVariant,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.close, size: 16, color: AppColors.textTertiary),
+              child: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 16, color: AppColors.textTertiary),
             ),
           ),
         ],
@@ -407,7 +408,7 @@ class _ProductivitySheetState extends State<_ProductivitySheet> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.emoji_events_rounded, size: 18, color: const Color(0xFFFFD166)),
+                    HugeIcon(icon: HugeIcons.strokeRoundedMedal01, size: 18, color: const Color(0xFFFFD166)),
                     const SizedBox(width: 8),
                     Text('Objetivo diário', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                     const Spacer(),
@@ -728,7 +729,7 @@ class _ProductivitySheetState extends State<_ProductivitySheet> {
                         ),
                         if (isActive) ...[
                           const SizedBox(width: 6),
-                          Icon(Icons.check_circle, size: 14, color: color),
+                          HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle01, size: 14, color: color),
                         ],
                       ],
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/anchored_select_menu.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class DebugAnchoredMenuScreen extends StatefulWidget {
   const DebugAnchoredMenuScreen({super.key});
@@ -175,7 +176,7 @@ class _DebugAnchoredMenuScreenState extends State<DebugAnchoredMenuScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.textSecondary),
+          icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, size: 18, color: AppColors.textSecondary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(

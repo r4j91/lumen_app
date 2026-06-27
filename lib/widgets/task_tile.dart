@@ -7,6 +7,7 @@ import '../services/haptic_service.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
 import 'pressable.dart';
+import 'package:hugeicons/hugeicons.dart';
 // ADICIONADO_ETAPA3B
 import 'task_detail/subtask_item.dart';
 // ADICIONADO_ETAPA3B
@@ -265,8 +266,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                             turns: _expanded ? 0.5 : 0,
                             duration: const Duration(milliseconds: 200),
                             curve: Curves.easeOutCubic,
-                            child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
+                            child: HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01,
                               size: 22,
                               color: Colors.white.withValues(alpha: 0.35),
                             ),
@@ -277,8 +277,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                       Padding(
                         padding:
                             const EdgeInsets.fromLTRB(4, 18, 14, 16),
-                        child: Icon(
-                          Icons.chevron_right,
+                        child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                           size: 18,
                           color: AppColors.textTertiary
                               .withValues(alpha: 0.3),
@@ -351,7 +350,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
       dateChip = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.calendar_today_rounded, size: 11, color: dateColor),
+          HugeIcon(icon: HugeIcons.strokeRoundedCalendar01, size: 11, color: dateColor),
           const SizedBox(width: 3),
           Text(label, style: TextStyle(fontSize: 12, color: dateColor, fontWeight: FontWeight.w500)),
         ],
@@ -407,7 +406,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
             if (task.time != null || task.recurrence != null) ...[
               const SizedBox(width: 6),
               if (task.time != null) ...[
-                Icon(Icons.access_time,
+                HugeIcon(icon: HugeIcons.strokeRoundedClock01,
                     size: 11, color: AppColors.textTertiary),
                 const SizedBox(width: 2),
                 Text(task.time!,
@@ -416,7 +415,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
               ],
               if (task.recurrence != null) ...[
                 const SizedBox(width: 4),
-                Icon(Icons.repeat, size: 11, color: AppColors.textTertiary),
+                HugeIcon(icon: HugeIcons.strokeRoundedRepeat, size: 11, color: AppColors.textTertiary),
               ],
             ],
           ],
@@ -492,8 +491,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.checklist_rounded,
+                      HugeIcon(icon: HugeIcons.strokeRoundedTaskDone01,
                         size: 13,
                         color: Colors.white.withValues(alpha: 0.35),
                       ),
@@ -511,7 +509,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                 ],
                 // M2-OLD: ícone e separador sempre visíveis, mesmo com commentCount == 0.
                 // Text(' • ', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                // Icon(Icons.chat_bubble_outline, size: 11, color: AppColors.textTertiary),
+                // HugeIcon(icon: HugeIcons.strokeRoundedComment01, size: 11, color: AppColors.textTertiary),
                 // const SizedBox(width: 3),
                 // Text('${task.commentCount}', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
                 if (task.commentCount > 0) ...[
@@ -519,8 +517,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.chat_bubble_outline_rounded,
+                      HugeIcon(icon: HugeIcons.strokeRoundedComment01,
                         size: 12,
                         color: Colors.white.withValues(alpha: 0.3),
                       ),
@@ -758,7 +755,7 @@ class SubtaskList extends StatelessWidget {
     //     border: Border.all(color: priColor, width: 2),
     //   ),
     //   child: done
-    //       ? Icon(Icons.check, size: 11, color: priColor.withValues(alpha: 0.8))
+    //       ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 11, color: priColor.withValues(alpha: 0.8))
     //       : null,
     // );
     const doneColor = Color(0xFF22C55E);
@@ -772,7 +769,7 @@ class SubtaskList extends StatelessWidget {
         border: Border.all(color: done ? doneColor : priColor, width: 2),
       ),
       child: done
-          ? const Icon(Icons.check_rounded, size: 10, color: Colors.white)
+          ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 10, color: Colors.white)
           : null,
     );
   }
@@ -946,7 +943,7 @@ class PriorityDot extends StatelessWidget {
     //     border: Border.all(color: _color, width: 2.5),
     //   ),
     //   child: done
-    //       ? const Icon(Icons.check, size: 12, color: Colors.white)
+    //       ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 12, color: Colors.white)
     //       : null,
     // );
     const doneColor = Color(0xFF22C55E);
@@ -960,7 +957,7 @@ class PriorityDot extends StatelessWidget {
         border: Border.all(color: done ? doneColor : _color, width: 2.5),
       ),
       child: done
-          ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+          ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 13, color: Colors.white)
           : null,
     );
   }
@@ -995,7 +992,7 @@ class SubtaskProgress extends StatelessWidget {
             painter: _ArcPainter(
                 progress: progress, color: color, complete: complete),
             child: complete
-                ? Icon(Icons.check, size: 9, color: color)
+                ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 9, color: color)
                 : Center(
                     child: Text(
                       '$done',
@@ -1079,7 +1076,7 @@ class TagChip extends StatelessWidget {
         if (showIcon) ...[
           // CORRIGIDO_ETAPA3B_CHIP: ícone substituído por bolinha colorida,
           // para padronizar com o estilo de chip já usado nas subtarefas.
-          // Icon(Icons.label_outline, size: 13, color: color),
+          // HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 13, color: color),
           Container(
             width: 6,
             height: 6,

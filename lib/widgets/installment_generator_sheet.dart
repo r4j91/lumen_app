@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/subtask_repository.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 /// Abre o gerador de parcelas (N subtarefas com vencimentos calculados
 /// automaticamente) para a tarefa [taskId].
@@ -252,7 +253,7 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
         behavior: HitTestBehavior.opaque,
         child: Padding(
           padding: const EdgeInsets.all(4),
-          child: Icon(Icons.close, size: 20, color: AppColors.textTertiary),
+          child: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 20, color: AppColors.textTertiary),
         ),
       ),
     ],
@@ -303,11 +304,11 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
               children: [
                 GestureDetector(
                   onTap: () => setState(() => _quantity = (_quantity + 1).clamp(1, 360)),
-                  child: Icon(Icons.keyboard_arrow_up, size: 18, color: AppColors.textSecondary),
+                  child: HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01, size: 18, color: AppColors.textSecondary),
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _quantity = (_quantity - 1).clamp(1, 360)),
-                  child: Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.textSecondary),
+                  child: HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, size: 18, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -332,7 +333,7 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
-          Icon(Icons.calendar_today_outlined, size: 15, color: AppColors.textSecondary),
+          HugeIcon(icon: HugeIcons.strokeRoundedCalendar01, size: 15, color: AppColors.textSecondary),
           const SizedBox(width: 10),
           Text(_formatDate(_firstDueDate), style: TextStyle(fontSize: 15, color: AppColors.textPrimary)),
         ],
@@ -400,7 +401,7 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 children: [
-                  Icon(Icons.check_box_outline_blank, size: 16, color: AppColors.textTertiary),
+                  HugeIcon(icon: HugeIcons.strokeRoundedSquare, size: 16, color: AppColors.textTertiary),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text('$nameBase / Parcela ${i + 1}', style: TextStyle(

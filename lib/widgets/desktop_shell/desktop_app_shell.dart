@@ -7,6 +7,7 @@ import '../../theme/app_colors.dart';
 import '../../screens/appearance_screen.dart';
 import '../../screens/logbook_screen.dart';
 import '../../screens/labels_screen.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class DesktopAppShell extends StatefulWidget {
   final int selectedIndex;
@@ -285,7 +286,7 @@ class _ShortcutsPanel extends StatelessWidget {
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: Icon(Icons.close, size: 18, color: AppColors.textTertiary),
+                    child: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 18, color: AppColors.textTertiary),
                   ),
                 ],
               ),

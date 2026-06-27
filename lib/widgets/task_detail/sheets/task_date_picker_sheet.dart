@@ -4,6 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../../models/recurrence.dart';
 import '../../../services/haptic_service.dart';
 import '../../../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class DatePickerResult {
   final DateTime? date;
@@ -205,7 +206,7 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
                                 ),
                               ),
                               if (isSelected)
-                                Icon(Icons.check, size: 15, color: AppColors.accent),
+                                HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 15, color: AppColors.accent),
                             ],
                           ),
                         ),
@@ -392,7 +393,7 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.close, size: 20),
+                    icon: const HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 20),
                     color: AppColors.textSecondary,
                     // CANCEL-OLD: botão X cancelava descartando seleção
                     // onPressed: _cancel,
@@ -479,8 +480,8 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
                   formatButtonVisible: false,
                   titleCentered: true,
                   titleTextStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                  leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.textSecondary, size: 22),
-                  rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 22),
+                  leftChevronIcon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: AppColors.textSecondary, size: 22),
+                  rightChevronIcon: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: AppColors.textSecondary, size: 22),
                   headerMargin: const EdgeInsets.only(bottom: 8),
                 ),
                 daysOfWeekStyle: DaysOfWeekStyle(
@@ -520,7 +521,7 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Row(
                   children: [
-                    Icon(Icons.access_time_rounded, size: 20,
+                    HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 20,
                         color: _time != null ? AppColors.accent : AppColors.textSecondary),
                     const SizedBox(width: 14),
                     Expanded(child: Text('Hora', style: TextStyle(fontSize: 15, color: AppColors.textPrimary))),
@@ -534,7 +535,7 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
                     AnimatedRotation(
                       turns: _timeExpanded ? 0.25 : 0,
                       duration: const Duration(milliseconds: 200),
-                      child: Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
+                      child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textTertiary),
                     ),
                   ],
                 ),
@@ -552,12 +553,12 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Row(
                   children: [
-                    Icon(Icons.repeat_rounded, size: 20, color: AppColors.textSecondary),
+                    HugeIcon(icon: HugeIcons.strokeRoundedRepeat, size: 20, color: AppColors.textSecondary),
                     const SizedBox(width: 14),
                     Expanded(child: Text('Repetir', style: TextStyle(fontSize: 15, color: AppColors.textPrimary))),
                     Text(_recurrenceLabel(), style: TextStyle(fontSize: 14, color: AppColors.textTertiary)),
                     const SizedBox(width: 6),
-                    Icon(Icons.unfold_more, size: 18, color: AppColors.textTertiary),
+                    HugeIcon(icon: HugeIcons.strokeRoundedUnfoldMore, size: 18, color: AppColors.textTertiary),
                   ],
                 ),
               ),

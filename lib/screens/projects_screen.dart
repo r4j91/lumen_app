@@ -15,6 +15,7 @@ import '../widgets/swipeable_task_tile.dart';
 import '../widgets/project_options_sheet.dart';
 import '../widgets/task_tile.dart';
 import 'task_detail_sheet.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class _ProjectMeta {
   final String id;
@@ -107,7 +108,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             children: [
               Expanded(child: Text('Projetos', style: Theme.of(context).textTheme.headlineLarge)),
               IconButton(
-                icon: Icon(Icons.add, color: AppColors.accent),
+                icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.accent),
                 tooltip: 'Adicionar projeto',
                 onPressed: _showAddProject,
               ),
@@ -374,19 +375,19 @@ class _InlineProjectDetailState extends State<_InlineProjectDetail> {
           child: Row(
             children: [
               IconButton(
-                icon: Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.textSecondary),
+                icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, size: 18, color: AppColors.textSecondary),
                 onPressed: widget.onBack,
               ),
               Expanded(
                 child: Text(widget.projectName, style: Theme.of(context).textTheme.headlineLarge),
               ),
               IconButton(
-                icon: Icon(Icons.add, color: AppColors.accent),
+                icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.accent),
                 onPressed: () => showNewTaskSheet(context, onSaved: _loadTasks),
               ),
               Builder(
                 builder: (ctx) => IconButton(
-                  icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                  icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textSecondary),
                   onPressed: () => _showOptionsMenu(ctx),
                   tooltip: 'Opções',
                 ),
@@ -730,7 +731,7 @@ class _AddProjectSheetState extends State<_AddProjectSheet> {
                             ),
                             boxShadow: isSelected ? [BoxShadow(color: c.withValues(alpha: 0.6), blurRadius: 8)] : [],
                           ),
-                          child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                          child: isSelected ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 16, color: Colors.white) : null,
                         ),
                       );
                     }).toList(),
@@ -747,7 +748,7 @@ class _AddProjectSheetState extends State<_AddProjectSheet> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.folder_open_rounded, size: 18, color: AppColors.background),
+                          HugeIcon(icon: HugeIcons.strokeRoundedFolderOpen, size: 18, color: AppColors.background),
                           const SizedBox(width: 8),
                           Text('Criar projeto', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.background)),
                         ],

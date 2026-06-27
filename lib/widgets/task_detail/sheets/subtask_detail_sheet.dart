@@ -11,6 +11,7 @@ import '../subtask_item.dart';
 import '../task_detail_widgets.dart';
 import 'task_date_picker_sheet.dart';
 import 'task_labels_picker_sheet.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 /// Opens the lightweight subtask detail sheet (título, notas, prioridade,
 /// data, etiquetas) — the reduced-field replacement for SubtaskOptionsSheet.
@@ -410,7 +411,7 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
                             color: AppColors.surfaceVariant.withValues(alpha: 0.5),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.close, size: 18, color: AppColors.textSecondary),
+                          child: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 18, color: AppColors.textSecondary),
                         ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -447,7 +448,7 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
                   padding: const EdgeInsets.only(left: 36, bottom: 8),
                   child: Row(
                     children: [
-                      Icon(Icons.subdirectory_arrow_right,
+                      HugeIcon(icon: HugeIcons.strokeRoundedArrowDownRight01,
                           size: 12, color: Colors.white.withValues(alpha: 0.25)),
                       const SizedBox(width: 4),
                       Text(

@@ -6,6 +6,7 @@ import '../../services/subtask_repository.dart';
 import '../../theme/app_colors.dart';
 import './subtask_item.dart';
 import './sheets/task_labels_picker_sheet.dart';
+import 'package:hugeicons/hugeicons.dart';
 // import './sheets/subtask_options_sheet.dart'; // replaced by subtask_detail_sheet.dart
 import './sheets/subtask_detail_sheet.dart';
 
@@ -173,7 +174,7 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
                     border: Border.all(color: priColor, width: 1.6),
                   ),
                   child: widget.item.done
-                      ? Icon(Icons.check, size: 12, color: priColor)
+                      ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 12, color: priColor)
                       : null,
                 ),
               ),
@@ -272,7 +273,7 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
               index: widget.index,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                child: Icon(Icons.drag_indicator, size: 16, color: AppColors.textTertiary.withValues(alpha: 0.4)),
+                child: HugeIcon(icon: HugeIcons.strokeRoundedMoreVertical, size: 16, color: AppColors.textTertiary.withValues(alpha: 0.4)),
               ),
             ),
           ],

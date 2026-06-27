@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_client.dart';
 import '../../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // DesktopSidebar — expanded sidebar with projects/labels/filters sections
@@ -529,7 +530,7 @@ class _NewTaskButtonState extends State<_NewTaskButton> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.add_rounded, size: 18, color: _fg),
+              HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 18, color: _fg),
               const SizedBox(width: 6),
               Text(
                 'Nova tarefa',
@@ -627,8 +628,7 @@ class _SectionHeaderState extends State<_SectionHeader> {
                 turns: widget.expanded ? 0.25 : 0.0,
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOutCubic,
-                child: Icon(
-                  Icons.chevron_right_rounded,
+                child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                   size: 16,
                   color: AppColors.textTertiary,
                 ),

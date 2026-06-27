@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/haptic_service.dart';
 import '../../../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class ProjectOption {
   final String id;
@@ -52,12 +53,12 @@ class TaskProjectPickerSheet extends StatelessWidget {
                 children: [
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-                    leading: Icon(Icons.inbox_outlined, size: 20,
+                    leading: HugeIcon(icon: HugeIcons.strokeRoundedInbox, size: 20,
                         color: current == null ? AppColors.accent : AppColors.textSecondary),
                     title: Text('Sem projeto', style: TextStyle(
                         fontSize: 16, color: AppColors.textPrimary,
                         fontWeight: current == null ? FontWeight.w600 : FontWeight.w500)),
-                    trailing: current == null ? Icon(Icons.check, size: 18, color: AppColors.accent) : null,
+                    trailing: current == null ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 18, color: AppColors.accent) : null,
                     dense: true,
                     visualDensity: const VisualDensity(horizontal: 0, vertical: -1),
                     onTap: () {
@@ -69,13 +70,13 @@ class TaskProjectPickerSheet extends StatelessWidget {
                   for (final p in projects)
                     ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-                      leading: Icon(Icons.folder_outlined, size: 20,
+                      leading: HugeIcon(icon: HugeIcons.strokeRoundedFolder01, size: 20,
                           color: current?.id == p.id ? AppColors.accent : AppColors.textSecondary),
                       title: Text(p.name, style: TextStyle(
                           fontSize: 16, color: AppColors.textPrimary,
                           fontWeight: current?.id == p.id ? FontWeight.w600 : FontWeight.w500),
                           overflow: TextOverflow.ellipsis),
-                      trailing: current?.id == p.id ? Icon(Icons.check, size: 18, color: AppColors.accent) : null,
+                      trailing: current?.id == p.id ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 18, color: AppColors.accent) : null,
                       dense: true,
                       visualDensity: const VisualDensity(horizontal: 0, vertical: -1),
                       onTap: () {

@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-27T16:50:00Z",
+  "title": "Design System: Lumen",
+  "extensions": {
+    "colorMeta": {
+      "accent-cyan": {
+        "role": "primary",
+        "displayName": "Accent Cyan",
+        "canonical": "#5FD3DC",
+        "tonalRamp": ["#0F2E30", "#194B4E", "#22686C", "#2C858B", "#3FA3A9", "#5FD3DC", "#8EE0E6", "#C2EEF1"]
+      },
+      "background-graphite": {
+        "role": "neutral",
+        "displayName": "Background Graphite",
+        "canonical": "#1A1B1E",
+        "tonalRamp": ["#0A0A0B", "#101113", "#1A1B1E", "#242529", "#2C2D33", "#3A3B42", "#55565F", "#8A8B94"]
+      },
+      "surface-graphite": {
+        "role": "neutral",
+        "displayName": "Surface Graphite",
+        "canonical": "#242529"
+      },
+      "surface-variant-graphite": {
+        "role": "neutral",
+        "displayName": "Surface Variant Graphite",
+        "canonical": "#2C2D33"
+      },
+      "priority-high": { "role": "semantic", "displayName": "Priority High", "canonical": "#EF5A5F" },
+      "priority-medium": { "role": "semantic", "displayName": "Priority Medium", "canonical": "#F5A623" },
+      "priority-low": { "role": "semantic", "displayName": "Priority Low", "canonical": "#4D9FEC" },
+      "tag-purple": { "role": "semantic", "displayName": "Tag Purple (Ideia)", "canonical": "#B18CF5" },
+      "tag-green": { "role": "semantic", "displayName": "Tag Green (Em Andamento)", "canonical": "#8FD46B" }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Screen Title", "purpose": "Cabeçalho de cada aba (Hoje, Em breve, Projetos)." },
+      "body": { "displayName": "Task Title", "purpose": "Linha principal de cada item de lista." },
+      "support": { "displayName": "Support Text", "purpose": "Metadados, descrição, nome de projeto." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-standard", "value": "Curves.easeOutCubic", "purpose": "Padrão para expand/collapse e transições de sheet." },
+      { "name": "duration-standard", "value": "200-220ms", "purpose": "Duração padrão observada em AnimatedRotation/AnimatedSize no app." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "< 1024px" },
+      { "name": "desktop", "value": ">= 1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Task Tile",
+      "kind": "custom",
+      "refersTo": "task-tile",
+      "description": "Linha de tarefa compacta (52-56px): checkbox circular, título, preview de descrição truncada, metadados, swipe revela ações, long-press abre menu de contexto.",
+      "html": "<div class=\"ds-task-tile\"><div class=\"ds-task-checkbox\"></div><div class=\"ds-task-body\"><div class=\"ds-task-title\">Revisar proposta de design</div><div class=\"ds-task-meta\">Hoje · Projeto Lúmen</div></div></div>",
+      "css": ".ds-task-tile { display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 16px; background: #1A1B1E; } .ds-task-checkbox { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #6B6E76; flex-shrink: 0; } .ds-task-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; } .ds-task-title { font-size: 15.5px; font-weight: 600; color: #F2F3F5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-task-meta { font-size: 12.5px; color: #9296A0; }"
+    },
+    {
+      "name": "Overdue Card",
+      "kind": "card",
+      "refersTo": "card-overdue",
+      "description": "Card de tarefa atrasada na Home — badge, título, data, prioridade/tags, botão de seta.",
+      "html": "<div class=\"ds-card-overdue\"><div class=\"ds-card-badge\">TAREFA ATRASADA</div><div class=\"ds-card-title\">Enviar relatório mensal</div><div class=\"ds-card-date\">Atrasada há 2 dias</div></div>",
+      "css": ".ds-card-overdue { background: #242529; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 11px 13px; } .ds-card-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: #EF5A5F; } .ds-card-title { font-size: 15px; font-weight: 700; color: #F2F3F5; margin-top: 3px; } .ds-card-date { font-size: 11px; color: #EF5A5F; margin-top: 4px; }"
+    },
+    {
+      "name": "Tag Chip",
+      "kind": "chip",
+      "refersTo": "chip-tag",
+      "description": "Etiqueta de tarefa — fundo na cor semântica em baixa opacidade, texto na cor plena, pill shape.",
+      "html": "<span class=\"ds-chip-tag\">Ideia</span>",
+      "css": ".ds-chip-tag { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: rgba(177,140,245,0.15); color: #B18CF5; font-size: 12px; font-weight: 600; }"
+    },
+    {
+      "name": "Priority Badge",
+      "kind": "chip",
+      "refersTo": "chip-priority",
+      "description": "Badge de prioridade (P1/P2/P3) com bolinha colorida + label.",
+      "html": "<span class=\"ds-priority-badge\"><span class=\"ds-priority-dot\"></span>P1</span>",
+      "css": ".ds-priority-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 20px; background: rgba(239,90,95,0.15); color: #EF5A5F; font-size: 11px; font-weight: 500; } .ds-priority-dot { width: 6px; height: 6px; border-radius: 50%; background: #EF5A5F; }"
+    },
+    {
+      "name": "Navbar Pill",
+      "kind": "nav",
+      "refersTo": "navbar-pill",
+      "description": "Pílula de navegação flutuante (Liquid Glass) com 5 abas, blur de fundo.",
+      "html": "<nav class=\"ds-navbar-pill\"><button class=\"ds-nav-item ds-nav-item--active\">Hoje</button><button class=\"ds-nav-item\">Inbox</button><button class=\"ds-nav-item\">Em breve</button></nav>",
+      "css": ".ds-navbar-pill { display: flex; gap: 4px; padding: 6px; border-radius: 999px; background: rgba(36,37,41,0.88); backdrop-filter: blur(20px); } .ds-nav-item { padding: 8px 14px; border-radius: 999px; background: transparent; color: #9296A0; font-size: 13px; border: none; } .ds-nav-item--active { background: rgba(95,211,220,0.15); color: #5FD3DC; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Control Room",
+    "overview": "Lumen é um painel de controle silencioso: alta densidade de informação organizada em camadas de tom escuro, onde nada compete por atenção sem necessidade. O sistema rejeita explicitamente o Todoist genérico colorido-demais, o Notion denso-de-blocos e qualquer gamificação visual. Densidade não é minimalismo vazio — é organização: linhas de tarefa compactas, tipografia com pesos diferenciados, e um único accent cyan usado com moderação.",
+    "keyCharacteristics": [
+      "Dark mode como cidadão de primeira classe (5 temas, graphite padrão)",
+      "Profundidade por camadas de tom, não por sombra projetada",
+      "Um accent por tema, usado com moderação",
+      "Linhas de conteúdo compactas e densas",
+      "Microinterações sutis carregam a sensação de qualidade"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Cada tema tem exatamente um accent, em ≤10% de qualquer tela.", "section": "colors" },
+      { "name": "The Tonal Depth Rule", "body": "Profundidade vem de três camadas de tom, nunca de sombra projetada.", "section": "colors" },
+      { "name": "The Weight-Not-Family Rule", "body": "Hierarquia é peso e tamanho, nunca troca de família tipográfica.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Superfícies são planas em repouso; destaque vem de camada de tom ou blur em sheets/popovers, nunca box-shadow decorativo.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do usar exatamente um accent por tema, em ≤10% da tela.",
+      "Do expressar elevação por camada de tom, nunca por sombra.",
+      "Do manter linhas de tarefa compactas (52-56px).",
+      "Do restringir caixa-alta + letter-spacing a badges/labels curtos.",
+      "Do usar BackdropFilter blur apenas em sheets, popovers e menus flutuantes."
+    ],
+    "donts": [
+      "Don't espalhar múltiplas cores saturadas competindo na mesma tela.",
+      "Don't empilhar opções/blocos por item ao estilo Notion.",
+      "Don't adicionar confete, badges de gamificação, streaks ou sons de recompensa.",
+      "Don't usar box-shadow decorativo em cards ou botões em repouso.",
+      "Don't trocar de família tipográfica pra criar hierarquia.",
+      "Don't usar border-left/border-right colorido como stripe decorativo."
+    ]
+  }
+}

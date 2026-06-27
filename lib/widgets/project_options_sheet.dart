@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
+import '../utils/project_icons.dart';
 
 // Dados mínimos de projeto necessários para o sheet
 class ProjectSheetData {
@@ -35,24 +37,9 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
   // com fallback (coluna 'icone' pode ainda não existir no banco).
   String? _selectedIcon;
 
-  static const _projectIcons = [
-    (icon: Icons.folder_rounded, name: 'folder'),
-    (icon: Icons.work_rounded, name: 'work'),
-    (icon: Icons.home_rounded, name: 'home'),
-    (icon: Icons.school_rounded, name: 'school'),
-    (icon: Icons.fitness_center_rounded, name: 'fitness'),
-    (icon: Icons.shopping_cart_rounded, name: 'shopping'),
-    (icon: Icons.favorite_rounded, name: 'favorite'),
-    (icon: Icons.star_rounded, name: 'star'),
-    (icon: Icons.rocket_launch_rounded, name: 'rocket'),
-    (icon: Icons.lightbulb_rounded, name: 'lightbulb'),
-    (icon: Icons.music_note_rounded, name: 'music'),
-    (icon: Icons.travel_explore_rounded, name: 'travel'),
-    (icon: Icons.attach_money_rounded, name: 'money'),
-    (icon: Icons.health_and_safety_rounded, name: 'health'),
-    (icon: Icons.code_rounded, name: 'code'),
-    (icon: Icons.brush_rounded, name: 'art'),
-  ];
+  // PROJECT-ICONS-OLD: lista de (icon: Icons.x, name: 'y') Material —
+  // movido pra ProjectIcons.iconList (lib/utils/project_icons.dart),
+  // mesmas strings salvas no Supabase, agora resolvendo pra Hugeicons.
 
   // COLORS-OLD: 12 cores — mantidas todas, +8 novas abaixo. (O pedido
   // sugeriu records (name, hex), mas _colors aqui é List<Color> simples,
@@ -214,7 +201,7 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, size: 20, color: AppColors.textTertiary),
+                  icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 20, color: AppColors.textTertiary),
                   onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
                 ),
               ],
@@ -265,16 +252,17 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
                 children: [
                   Text('Ícone', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textTertiary, letterSpacing: 0.5)),
                   const SizedBox(height: 10),
+                  // PROJECT-ICONS-V1: grid com HugeIcon
                   GridView.count(
                     crossAxisCount: 4,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
-                    children: _projectIcons.map((item) {
-                      final isSelected = _selectedIcon == item.name;
+                    children: ProjectIcons.iconList.map((entry) {
+                      final isSelected = _selectedIcon == entry.key;
                       return GestureDetector(
-                        onTap: () => setState(() => _selectedIcon = item.name),
+                        onTap: () => setState(() => _selectedIcon = entry.key),
                         child: Container(
                           decoration: BoxDecoration(
                             color: isSelected ? _selectedColor.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
@@ -284,10 +272,14 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
                               width: isSelected ? 1.5 : 1,
                             ),
                           ),
-                          child: Icon(
-                            item.icon,
-                            size: 22,
-                            color: isSelected ? _selectedColor : Colors.white.withValues(alpha: 0.5),
+                          // PROJECT-SIZE-OLD: size: 22
+                          child: Center(
+                            child: HugeIcon(
+                              icon: entry.value,
+                              // PROJECT-SIZE-V1
+                              size: 28,
+                              color: isSelected ? _selectedColor : Colors.white.withValues(alpha: 0.5),
+                            ),
                           ),
                         ),
                       );
@@ -319,7 +311,7 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
                             border: Border.all(color: isSelected ? Colors.white : Colors.transparent, width: 2.5),
                             boxShadow: isSelected ? [BoxShadow(color: c.withValues(alpha: 0.6), blurRadius: 8)] : [],
                           ),
-                          child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                          child: isSelected ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 16, color: Colors.white) : null,
                         ),
                       );
                     }).toList(),

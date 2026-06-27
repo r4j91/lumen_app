@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/app_icon_service.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class AppIconScreen extends StatefulWidget {
   const AppIconScreen({super.key});
@@ -74,7 +75,7 @@ class _AppIconScreenState extends State<AppIconScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.textSecondary),
+          icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, size: 18, color: AppColors.textSecondary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Ícone do app', style: Theme.of(context).textTheme.titleLarge),
@@ -101,7 +102,7 @@ class _AppIconScreenState extends State<AppIconScreen> {
                   shape: BoxShape.circle,
                   color: AppColors.surfaceVariant,
                 ),
-                child: Icon(Icons.block_rounded, size: 34, color: AppColors.textTertiary),
+                child: HugeIcon(icon: HugeIcons.strokeRoundedBlocked, size: 34, color: AppColors.textTertiary),
               ),
               const SizedBox(height: 20),
               Text(
@@ -320,7 +321,7 @@ class _IconCard extends StatelessWidget {
                 ),
                 if (selected) ...[
                   const SizedBox(width: 3),
-                  Icon(Icons.check_circle_rounded, size: 12, color: AppColors.accent),
+                  HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle01, size: 12, color: AppColors.accent),
                 ],
               ],
             ),

@@ -12,6 +12,8 @@ import '../widgets/skeleton_loader.dart';
 import '../widgets/swipeable_task_tile.dart';
 import '../widgets/task_tile.dart';
 import 'task_detail_sheet.dart';
+import '../widgets/scroll_fade_overlay.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // ── Calendar mode ─────────────────────────────────────────────────────────────
 
@@ -234,7 +236,7 @@ class _UpcomingScreenState extends State<UpcomingScreen>
       color: AppColors.accent,
       backgroundColor: AppColors.surface,
       onRefresh: _loadTasks,
-      child: CustomScrollView(
+      child: ScrollFadeOverlay(child: CustomScrollView(
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         // ── Mode toggle bar ──────────────────────────────────────────────────
@@ -262,7 +264,7 @@ class _UpcomingScreenState extends State<UpcomingScreen>
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Row(
                 children: [
-                  Icon(Icons.list_rounded, size: 15, color: AppColors.accent),
+                  HugeIcon(icon: HugeIcons.strokeRoundedListView, size: 15, color: AppColors.accent),
                   const SizedBox(width: 6),
                   Text(
                     _agendaPeriodLabel(),
@@ -382,7 +384,7 @@ class _UpcomingScreenState extends State<UpcomingScreen>
 
         SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
       ],
-    ));
+    )));
   }
 
   Widget _buildCalendar() {
@@ -434,8 +436,8 @@ class _UpcomingScreenState extends State<UpcomingScreen>
             fontWeight: FontWeight.w700,
             fontSize: 15),
         leftChevronIcon:
-            Icon(Icons.chevron_left, color: AppColors.textSecondary, size: 20),
-        rightChevronIcon: Icon(Icons.chevron_right,
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: AppColors.textSecondary, size: 20),
+        rightChevronIcon: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
             color: AppColors.textSecondary, size: 20),
         headerPadding: EdgeInsets.symmetric(vertical: 8),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../models/task.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_colors.dart';
+import 'package:hugeicons/hugeicons.dart';
 // import 'task_context_sheet.dart'; // replaced by overlay menu below
 import 'task_context_menu.dart';
 
@@ -134,7 +135,7 @@ class _SwipeableTaskTileState extends State<SwipeableTaskTile>
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.check, size: 22),
+                  HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 22),
                   SizedBox(height: 4),
                   Text('Concluir',
                       style: TextStyle(
@@ -158,7 +159,7 @@ class _SwipeableTaskTileState extends State<SwipeableTaskTile>
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.access_time, size: 22),
+                  HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 22),
                   SizedBox(height: 4),
                   Text('Adiar',
                       style: TextStyle(
@@ -178,7 +179,7 @@ class _SwipeableTaskTileState extends State<SwipeableTaskTile>
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.delete_outline, size: 22),
+                  HugeIcon(icon: HugeIcons.strokeRoundedDelete01, size: 22),
                   SizedBox(height: 4),
                   Text('Excluir',
                       style: TextStyle(

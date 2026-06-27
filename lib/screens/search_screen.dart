@@ -10,6 +10,7 @@ import '../widgets/app_sheet.dart';
 import '../widgets/pressable.dart';
 import '../widgets/task_tile.dart';
 import 'task_detail_sheet.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 Future<void> showSearchScreen(BuildContext context) {
   return Navigator.of(context).push(
@@ -162,7 +163,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Row(
                         children: [
                           const SizedBox(width: 12),
-                          Icon(Icons.search, size: 18, color: AppColors.textTertiary),
+                          HugeIcon(icon: HugeIcons.strokeRoundedSearch01, size: 18, color: AppColors.textTertiary),
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextField(
@@ -196,7 +197,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               },
                               child: Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
-                                child: Icon(Icons.cancel, size: 17, color: AppColors.textTertiary),
+                                child: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 17, color: AppColors.textTertiary),
                               ),
                             ),
                         ],
@@ -388,7 +389,7 @@ class _SearchResultTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(Icons.folder_outlined, size: 11, color: AppColors.textTertiary),
+                        HugeIcon(icon: HugeIcons.strokeRoundedFolder01, size: 11, color: AppColors.textTertiary),
                         const SizedBox(width: 4),
                         Text(
                           task.project,
@@ -396,7 +397,7 @@ class _SearchResultTile extends StatelessWidget {
                         ),
                         if (task.time != null) ...[
                           const SizedBox(width: 8),
-                          Icon(Icons.access_time, size: 11, color: AppColors.textTertiary),
+                          HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 11, color: AppColors.textTertiary),
                           const SizedBox(width: 3),
                           Text(task.time!, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                         ],
@@ -470,7 +471,7 @@ class _EmptyPrompt extends StatelessWidget {
               color: AppColors.surfaceVariant,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.search, size: 30, color: AppColors.textTertiary),
+            child: HugeIcon(icon: HugeIcons.strokeRoundedSearch01, size: 30, color: AppColors.textTertiary),
           ),
           const SizedBox(height: 14),
           Text('Digite para buscar', style: TextStyle(fontSize: 15, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
@@ -492,7 +493,7 @@ class _NoResults extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search_off, size: 40, color: AppColors.textTertiary),
+          HugeIcon(icon: HugeIcons.strokeRoundedSearchRemove, size: 40, color: AppColors.textTertiary),
           const SizedBox(height: 12),
           Text('Nenhum resultado para "$query"', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
         ],

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import 'popover_style.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
@@ -486,7 +487,7 @@ class _MenuItemRowState extends State<_MenuItemRow> {
                 ),
               ),
               if (item.selected)
-                Icon(Icons.check_rounded, size: 16, color: AppColors.accent),
+                HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 16, color: AppColors.accent),
             ],
           ),
         ),
@@ -749,8 +750,7 @@ class _MultiSelectItemRowState extends State<_MultiSelectItemRow> {
                 ),
               ),
               if (widget.selected)
-                Icon(
-                  Icons.check_rounded,
+                HugeIcon(icon: HugeIcons.strokeRoundedTick01,
                   size: 16,
                   color: item.dotColor ?? AppColors.accent,
                 ),

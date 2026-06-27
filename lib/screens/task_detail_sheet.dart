@@ -22,6 +22,7 @@ import '../widgets/task_detail/subtask_editor.dart';
 import '../widgets/task_detail/subtask_item.dart';
 import '../widgets/task_detail/task_detail_widgets.dart';
 import 'quick_add_task_sheet.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 // Lightweight structs just for this sheet
 class _Project {
@@ -851,7 +852,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
               mainAxisSize: MainAxisSize.min,
               children: [
                 // SUBSTITUIDO_REDESIGN_DETAIL
-                // Icon(Icons.label_outline, size: 11, color: l.color),
+                // HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 11, color: l.color),
                 Container(
                   width: 7,
                   height: 7,
@@ -1412,7 +1413,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.grid_view_rounded, size: 13, color: AppColors.textSecondary),
+                  HugeIcon(icon: HugeIcons.strokeRoundedGrid, size: 13, color: AppColors.textSecondary),
                   const SizedBox(width: 6),
                   Text(
                     _project?.name ?? 'Sem projeto',
@@ -1423,7 +1424,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textTertiary),
+                  HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, size: 14, color: AppColors.textTertiary),
                 ],
               ),
             ),
@@ -1517,7 +1518,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                   color: AppColors.surfaceVariant.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.close, size: 18,
+                child: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 18,
                     color: AppColors.textSecondary),
               ),
               padding: EdgeInsets.zero,
@@ -1912,8 +1913,8 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                       child: Row(
                         children: [
                           // CORRIGIDO_REDESIGN_ICONE_SUBTAREFAS
-                          // Icon(Icons.check_box_outline_blank_rounded, size: 17, color: AppColors.textSecondary),
-                          Icon(Icons.checklist_rounded, size: 17, color: AppColors.textSecondary),
+                          // HugeIcon(icon: HugeIcons.strokeRoundedSquare, size: 17, color: AppColors.textSecondary),
+                          HugeIcon(icon: HugeIcons.strokeRoundedTaskDone01, size: 17, color: AppColors.textSecondary),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -1937,7 +1938,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                           AnimatedRotation(
                             turns: _subtasksExpanded ? 0.25 : 0,
                             duration: const Duration(milliseconds: 200),
-                            child: Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
+                            child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textTertiary),
                           ),
                         ],
                       ),
@@ -2004,7 +2005,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                         color: AppColors.accent.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.person_rounded,
+                      child: HugeIcon(icon: HugeIcons.strokeRoundedUser,
                           size: 16, color: AppColors.accent),
                     ),
                     const SizedBox(width: 10),
@@ -2081,7 +2082,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
           child: Row(
             children: [
               const SizedBox(width: 14),
-              Icon(Icons.attach_file_rounded,
+              HugeIcon(icon: HugeIcons.strokeRoundedAttachment01,
                   size: 17, color: AppColors.textTertiary),
               const SizedBox(width: 10),
               Expanded(
@@ -2121,8 +2122,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                         ? AppColors.accent
                         : AppColors.textTertiary.withValues(alpha: 0.2),
                   ),
-                  child: Icon(
-                    Icons.arrow_upward_rounded,
+                  child: HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01,
                     size: 16,
                     color: hasComment
                         ? AppColors.background
@@ -2322,7 +2322,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                 },
               )),
               _DesktopPickerRow(
-                leading: Icon(Icons.flag_outlined, size: 16, color: AppColors.textTertiary),
+                leading: HugeIcon(icon: HugeIcons.strokeRoundedFlag01, size: 16, color: AppColors.textTertiary),
                 label: 'Sem prioridade',
                 selected: _priority == null,
                 onTap: () {
@@ -2431,7 +2431,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                           hintStyle: TextStyle(
                               fontSize: 13.5,
                               color: AppColors.textTertiary.withValues(alpha: 0.6)),
-                          prefixIcon: Icon(Icons.search, size: 16,
+                          prefixIcon: HugeIcon(icon: HugeIcons.strokeRoundedSearch01, size: 16,
                               color: AppColors.textTertiary),
                           prefixIconConstraints:
                               const BoxConstraints(minWidth: 34, minHeight: 34),
@@ -2822,7 +2822,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                     color: AppColors.accent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.add, size: 13, color: AppColors.accent),
+                  child: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 13, color: AppColors.accent),
                 ),
                 const SizedBox(width: 10),
                 Text(
@@ -2860,7 +2860,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
         //               color: AppColors.accent.withValues(alpha: 0.12),
         //               shape: BoxShape.circle,
         //             ),
-        //             child: Icon(Icons.grid_view_rounded, size: 12, color: AppColors.accent),
+        //             child: HugeIcon(icon: HugeIcons.strokeRoundedGrid, size: 12, color: AppColors.accent),
         //           ),
         //           const SizedBox(width: 10),
         //           Text(
@@ -3016,7 +3016,7 @@ class _DesktopPickerRowState extends State<_DesktopPickerRow> {
                 ),
               ),
               if (widget.selected)
-                Icon(Icons.check,
+                HugeIcon(icon: HugeIcons.strokeRoundedTick01,
                     size: 15,
                     color: widget.checkColor ?? AppColors.accent),
             ],
@@ -3183,8 +3183,7 @@ class _AttrPanelRowState extends State<_AttrPanelRow> {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
+              HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01,
                 size: 13,
                 color: AppColors.textTertiary.withValues(alpha: 0.4),
               ),
