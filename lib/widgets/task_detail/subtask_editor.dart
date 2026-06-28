@@ -4,6 +4,7 @@ import '../../models/subtask.dart';
 import '../../services/haptic_service.dart';
 import '../../services/subtask_repository.dart';
 import '../../theme/app_colors.dart';
+import '../task_tile.dart' show TagChip;
 import './subtask_item.dart';
 import './sheets/task_labels_picker_sheet.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -80,10 +81,15 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
   }
 
   Future<void> _persistField(String column, String value) async {
-    final id = widget.item.id;
-    if (id == null) return;
+    widget.item.order = widget.index;
     try {
-      await _repo.updateSubtaskFields(id, {column: value.isEmpty ? null : value});
+      await _repo.persistSubtask(
+        id: widget.item.id,
+        taskId: widget.item.taskId,
+        order: widget.item.order,
+        fields: {column: value.isEmpty ? null : value},
+        onIdResolved: (resolved) => widget.item.id = resolved,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -94,40 +100,22 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
     }
   }
 
-  // PRIORITY-CENTRAL-OLD: _priorityColor local — movido pra
-  // SubtaskPriorityExtension em lib/models/subtask.dart.
-  Color _priorityColor(SubtaskPriority? p) => p?.color ?? AppColors.textTertiary;
-
   void _showOptionsSheet() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    widget.item.order = widget.index;
     HapticService().lightImpact();
-    // Replaced by SubtaskDetailSheet (Liquid Glass, reduced field set).
-    // SubtaskOptionsSheet kept in the codebase, just unused — see
-    // ./sheets/subtask_options_sheet.dart.
-    // showModalBottomSheet<void>(
-    //   context: context,
-    //   useRootNavigator: true,
-    //   isScrollControlled: true,
-    //   isDismissible: true,
-    //   enableDrag: true,
-    //   backgroundColor: Colors.transparent,
-    //   builder: (_) => SubtaskOptionsSheet(
-    //     item: widget.item,
-    //     labels: widget.labels,
-    //     onChanged: () {
-    //       setState(() {});
-    //       widget.onChanged();
-    //     },
-    //   ),
-    // );
-    showSubtaskDetailSheet(
-      context: context,
-      item: widget.item,
-      labels: widget.labels,
-      onChanged: () {
-        setState(() {});
-        widget.onChanged();
-      },
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showSubtaskDetailSheet(
+        context: context,
+        item: widget.item,
+        labels: widget.labels,
+        onChanged: () {
+          setState(() {});
+          widget.onChanged();
+        },
+      );
+    });
   }
 
   String _formatDate(SubtaskItem item) {
@@ -139,6 +127,13 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
       return '$base ${item.dueTime!.hour.toString().padLeft(2, '0')}:${item.dueTime!.minute.toString().padLeft(2, '0')}';
     }
     return base;
+  }
+
+  Color _priorityColor(SubtaskPriority? p) => p?.color ?? AppColors.textTertiary;
+
+  Widget _safeContextMenu(BuildContext context, EditableTextState state, FocusNode node) {
+    if (!node.hasFocus) return const SizedBox.shrink();
+    return AdaptiveTextSelectionToolbar.editableText(editableTextState: state);
   }
 
   @override
@@ -185,6 +180,8 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
                   TextField(
                     controller: widget.item.ctrl,
                     focusNode: widget.item.focus,
+                    contextMenuBuilder: (ctx, state) =>
+                        _safeContextMenu(ctx, state, widget.item.focus),
                     style: TextStyle(
                       fontSize: 15,
                       color: widget.item.done ? AppColors.textTertiary : AppColors.textPrimary,
@@ -211,6 +208,8 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
                         ? TextField(
                             controller: widget.item.descCtrl,
                             focusNode: widget.item.descFocus,
+                            contextMenuBuilder: (ctx, state) =>
+                                _safeContextMenu(ctx, state, widget.item.descFocus),
                             maxLines: null,
                             style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.45),
                             decoration: InputDecoration(
@@ -236,15 +235,14 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           if (hasDate)
-                            SubtaskMetaChip(
-                              hugeIcon: HugeIcons.strokeRoundedCalendar01,
+                            TagChip(
                               label: _formatDate(widget.item),
-                              color: const Color(0xFF4D9FEC),
+                              color: AppColors.dateUpcoming,
+                              hugeIcon: HugeIcons.strokeRoundedCalendar01,
                             ),
                           ...widget.labels
                               .where((l) => widget.item.labelIds.contains(l.id))
-                              .map((l) => SubtaskMetaChip(
-                                    hugeIcon: HugeIcons.strokeRoundedTag01,
+                              .map((l) => TagChip(
                                     label: l.name,
                                     color: l.color,
                                   )),
@@ -274,36 +272,6 @@ class _SubtaskEditorRowState extends State<SubtaskEditorRow> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class SubtaskMetaChip extends StatelessWidget {
-  final List<List<dynamic>>? hugeIcon;
-  final String label;
-  final Color color;
-  const SubtaskMetaChip({super.key, this.hugeIcon, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          HugeIcon(
-            icon: hugeIcon ?? HugeIcons.strokeRoundedCalendar01,
-            size: 11,
-            color: color.withValues(alpha: 0.85),
-          ),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.9), fontWeight: FontWeight.w500)),
-        ],
       ),
     );
   }

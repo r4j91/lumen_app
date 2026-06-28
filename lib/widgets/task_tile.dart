@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../models/subtask.dart';
 import '../services/haptic_service.dart';
+import '../services/label_repository.dart';
 import '../services/supabase_client.dart';
+import '../services/task_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import 'pressable.dart';
@@ -30,6 +32,8 @@ class TaskTile extends StatefulWidget {
   // e por isso não resolvia labelIds de subtarefa não compartilhados com
   // a tarefa (causava UUID cru aparecendo no chip).
   final List<TaskLabel>? allLabels;
+  /// Recarrega a lista após editar metadados de subtarefa inline.
+  final VoidCallback? onSubtaskChanged;
 
   const TaskTile({
     super.key,
@@ -40,6 +44,7 @@ class TaskTile extends StatefulWidget {
     this.onDismissed,
     this.showProject = true,
     this.allLabels,
+    this.onSubtaskChanged,
   });
 
   @override
@@ -47,6 +52,9 @@ class TaskTile extends StatefulWidget {
 }
 
 class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
+  static const _labelRepo = LabelRepository();
+  List<TaskLabel> _workspaceLabels = [];
+  bool _workspaceLabelsLoaded = false;
   bool _expanded = false;
 
   late final AnimationController _expandCtrl;
@@ -115,6 +123,24 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
         .animate(CurvedAnimation(parent: _exitCtrl, curve: Curves.easeInCubic));
     _exitFade = Tween<double>(begin: 1.0, end: 0.0)
         .animate(CurvedAnimation(parent: _exitCtrl, curve: Curves.easeInCubic));
+    if (widget.allLabels == null) {
+      _loadWorkspaceLabels();
+    }
+  }
+
+  List<TaskLabel> get _subtaskLabelSource =>
+      widget.allLabels ?? (_workspaceLabelsLoaded ? _workspaceLabels : widget.task.labels);
+
+  Future<void> _loadWorkspaceLabels() async {
+    try {
+      final labels = await _labelRepo.fetchLabels();
+      if (mounted && widget.allLabels == null) {
+        setState(() {
+          _workspaceLabels = labels;
+          _workspaceLabelsLoaded = true;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -300,20 +326,33 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                       // projectLabels: task.labels
                       //     .map((l) => LabelOption(l.id, l.name, l.color))
                       //     .toList(),
-                      projectLabels: (widget.allLabels ?? task.labels)
+                      projectLabels: _subtaskLabelSource
                           .map((l) => LabelOption(l.id, l.name, l.color))
                           .toList(),
                       parentTaskTitle: task.title, // ADICIONADO_REDESIGN_SUBTASK
+                      parentTaskId: task.id,
+                      onSubtaskChanged: widget.onSubtaskChanged,
                       onToggle: (i) {
                         final newDone = !_subtasksDone[i];
                         setState(() => _subtasksDone[i] = newDone);
                         widget.onSubtaskToggled(i);
-                        supabase
-                            .from('subtasks')
-                            .update({'concluida': newDone})
-                            .eq('task_id', widget.task.id)
-                            .eq('ordem', i)
-                            .catchError((_) {});
+                        final sub = widget.task.subtasks[i];
+                        if (sub.id != null) {
+                          supabase
+                              .from('subtasks')
+                              .update({'concluida': newDone})
+                              .eq('id', sub.id!)
+                              .then((_) => TaskSync.instance.notifyChanged())
+                              .catchError((_) {});
+                        } else {
+                          supabase
+                              .from('subtasks')
+                              .update({'concluida': newDone})
+                              .eq('task_id', widget.task.id)
+                              .eq('ordem', sub.order)
+                              .then((_) => TaskSync.instance.notifyChanged())
+                              .catchError((_) {});
+                        }
                       },
                     ),
                   ),
@@ -328,33 +367,6 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
   Widget _buildBody(Task task) {
     final done = _subtasksDone.where((d) => d).length;
     final total = _subtasksDone.length;
-
-    // BUG1: chip de data da tarefa pai no modo Balões.
-    Widget? dateChip;
-    if (task.dueDate != null) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final d = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
-      // COLORS-OLD: Color(0xFFEF4444)/Color(0xFF22C55E)
-      final Color dateColor;
-      if (d.isBefore(today)) {
-        dateColor = AppColors.overdue;
-      } else if (d == today) {
-        dateColor = AppColors.success;
-      } else {
-        dateColor = AppColors.textSecondary;
-      }
-      const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-      final label = d == today ? 'Hoje' : '${d.day} ${months[d.month - 1]}';
-      dateChip = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          HugeIcon(icon: HugeIcons.strokeRoundedCalendar01, size: 11, color: dateColor),
-          const SizedBox(width: 3),
-          Text(label, style: TextStyle(fontSize: 12, color: dateColor, fontWeight: FontWeight.w500)),
-        ],
-      );
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,104 +449,21 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
           ),
         ],
 
-        // ── Labels ───────────────────────────────────────────────────
-        if (task.labels.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.only(left: 30),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                ...task.labels.take(3).map((l) => TagChip(
-                      label: l.name,
-                      color: l.color,
-                    )),
-                if (task.labels.length > 3)
-                  TagChip(
-                    label: '+${task.labels.length - 3}',
-                    color: AppColors.textTertiary,
-                    showIcon: false,
-                  ),
-              ],
-            ),
+        // ── Meta unificada (etiquetas · data · contadores) ───────────
+        TaskMetaLine(
+          labels: task.labels,
+          dueDate: task.dueDate,
+          subtasksDone: done,
+          subtasksTotal: total,
+          commentCount: task.commentCount,
+          projectName: widget.showProject && task.project != 'Sem projeto'
+              ? task.project
+              : null,
+          padding: EdgeInsets.only(
+            left: 30,
+            top: task.description != null && task.description!.isNotEmpty ? 4 : 8,
           ),
-        ],
-
-        // BUG1-OLD: task.dueDate nunca era exibido no modo Balões — só era
-        // usado para gerar os chips de data das subtarefas.
-        // ── Meta footer ──────────────────────────────────────────────
-        if (widget.showProject && task.project != 'Sem projeto' || task.hasSubtasks || task.dueDate != null) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.only(left: 30),
-            child: Row(
-              children: [
-                if (widget.showProject && task.project != 'Sem projeto') ...[
-                  Text(
-                    task.project,
-                    style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (task.hasSubtasks)
-                    Text(' • ', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                ],
-                // M3-OLD: contador sem ícone ao lado.
-                // if (task.hasSubtasks)
-                //   Text(
-                //     '$done/$total',
-                //     style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                //   ),
-                if (task.hasSubtasks)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      HugeIcon(icon: HugeIcons.strokeRoundedTaskDone01,
-                        size: 13,
-                        color: AppColors.textTertiary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '$done/$total',
-                        style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                      ),
-                    ],
-                  ),
-                if (dateChip != null) ...[
-                  if (task.hasSubtasks || (widget.showProject && task.project != 'Sem projeto'))
-                    Text(' • ', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                  dateChip,
-                ],
-                // M2-OLD: ícone e separador sempre visíveis, mesmo com commentCount == 0.
-                // Text(' • ', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                // HugeIcon(icon: HugeIcons.strokeRoundedComment01, size: 11, color: AppColors.textTertiary),
-                // const SizedBox(width: 3),
-                // Text('${task.commentCount}', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                if (task.commentCount > 0) ...[
-                  Text(' • ', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      HugeIcon(icon: HugeIcons.strokeRoundedComment01,
-                        size: 12,
-                        color: AppColors.textTertiary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${task.commentCount}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+        ),
       ],
     );
   }
@@ -552,6 +481,8 @@ class SubtaskList extends StatelessWidget {
   // ADICIONADO_REDESIGN_SUBTASK: título da tarefa pai, usado no breadcrumb
   // do SubtaskDetailSheet.
   final String? parentTaskTitle;
+  final String? parentTaskId;
+  final VoidCallback? onSubtaskChanged;
 
   const SubtaskList(
       {super.key,
@@ -559,7 +490,9 @@ class SubtaskList extends StatelessWidget {
       this.doneStates,
       required this.onToggle,
       this.projectLabels,
-      this.parentTaskTitle});
+      this.parentTaskTitle,
+      this.parentTaskId,
+      this.onSubtaskChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -703,8 +636,13 @@ class SubtaskList extends StatelessWidget {
   // ADICIONADO_ETAPA3B
   Widget _buildSubtaskRow(BuildContext context, Subtask sub, int index) {
     final done = _doneAt(index);
+    final hasDesc = sub.description != null && sub.description!.isNotEmpty;
+    final hasChips = sub.dueDate != null || sub.labelIds.isNotEmpty;
+    final centerTitle = !hasDesc && !hasChips;
+
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+          centerTitle ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -713,7 +651,10 @@ class SubtaskList extends StatelessWidget {
             onToggle(index);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
+            padding: EdgeInsets.symmetric(
+              vertical: centerTitle ? 4 : 13,
+              horizontal: 4,
+            ),
             child: _buildSubtaskCircle(sub, done),
           ),
         ),
@@ -723,11 +664,11 @@ class SubtaskList extends StatelessWidget {
             onTap: () => _openSubtaskDetail(context, sub),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _buildSubtaskTitle(sub, done),
-                if (sub.description != null && sub.description!.isNotEmpty)
-                  _buildSubtaskDesc(sub, done),
-                _buildSubtaskChips(context, sub),
+                if (hasDesc) _buildSubtaskDesc(sub, done),
+                _buildSubtaskMeta(sub),
               ],
             ),
           ),
@@ -809,93 +750,29 @@ class SubtaskList extends StatelessWidget {
     );
   }
 
-  // ADICIONADO_ETAPA3B
-  static const _ptMonths = [
-    'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-    'jul', 'ago', 'set', 'out', 'nov', 'dez',
-  ];
-
-  // ADICIONADO_ETAPA3B
-  Widget _buildSubtaskChips(BuildContext context, Subtask sub) {
-    final chips = <Widget>[];
-
-    if (sub.dueDate != null) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final due = DateTime(sub.dueDate!.year, sub.dueDate!.month, sub.dueDate!.day);
-      final diff = due.difference(today).inDays;
-      // COLORS-OLD: Color(0xFF7ECC49)/Color(0xFFDC4C3E)/Color(0xFFF0A830)
-      final Color dotColor;
-      final String label;
-      if (diff == 0) {
-        dotColor = AppColors.dateDueToday;
-        label = 'Hoje';
-      } else if (diff < 0) {
-        dotColor = AppColors.dateOverdue;
-        label = '${due.day} ${_ptMonths[due.month - 1]}';
-      } else {
-        dotColor = AppColors.dateUpcoming;
-        label = '${due.day} ${_ptMonths[due.month - 1]}';
-      }
-      chips.add(_metaChip(dotColor, label));
-    }
-
-    if (sub.labelIds.isNotEmpty) {
+  Widget _buildSubtaskMeta(Subtask sub) {
+    final resolved = <TaskLabel>[];
+    if (sub.labelIds.isNotEmpty && projectLabels != null) {
       for (final id in sub.labelIds) {
-        final option = projectLabels?.where((l) => l.id == id).firstOrNull;
+        final option = projectLabels!.where((l) => l.id == id).firstOrNull;
         if (option != null) {
-          chips.add(_metaChip(option.color, option.name));
-        } else {
-          // Nunca quebrar silenciosamente — fallback cinza com o id.
-          chips.add(_metaChip(AppColors.textTertiary, id));
+          resolved.add(TaskLabel(id: option.id, name: option.name, color: option.color));
         }
       }
     }
-
-    if (chips.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
+    return TaskMetaLine(
+      labels: resolved,
+      dueDate: sub.dueDate,
       padding: const EdgeInsets.only(top: 6),
-      child: Wrap(
-        spacing: 5,
-        runSpacing: 4,
-        children: chips,
-      ),
     );
   }
 
-  // ADICIONADO_ETAPA3B
-  Widget _metaChip(Color color, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-          ),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ADICIONADO_ETAPA3B
   void _openSubtaskDetail(BuildContext context, Subtask sub) {
     HapticService().lightImpact();
     final item = SubtaskItem(
       id: sub.id,
+      taskId: parentTaskId,
+      order: sub.order,
       title: sub.title,
       description: sub.description,
       done: sub.done,
@@ -909,12 +786,10 @@ class SubtaskList extends StatelessWidget {
       item: item,
       labels: projectLabels ?? const [],
       parentTaskTitle: parentTaskTitle, // ADICIONADO_REDESIGN_SUBTASK
-      // O sheet já persiste cada campo via debounce direto no Supabase
-      // (SubtaskRepository.updateSubtaskFields). Não há callback de reload
-      // de lista cabeado aqui (SubtaskList é stateless e recebe `subtasks`
-      // de fora); a tela que hospeda o TaskTile precisa recarregar a tarefa
-      // para refletir a edição — fora do escopo desta etapa.
-      onChanged: () {},
+      onChanged: () {
+        TaskSync.instance.notifyChanged();
+        onSubtaskChanged?.call();
+      },
     );
   }
 }
@@ -1056,19 +931,161 @@ class _ArcPainter extends CustomPainter {
       old.progress != progress || old.color != color || old.complete != complete;
 }
 
+// ── Due-date chip (shared between balloon + list layouts) ────────────────────
+
+const kPtMonthsShort = [
+  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+  'jul', 'ago', 'set', 'out', 'nov', 'dez',
+];
+
+({Color color, String label}) dueDateStyle(DateTime dueDate) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
+  final diff = due.difference(today).inDays;
+  if (diff == 0) {
+    return (color: AppColors.dateDueToday, label: 'Hoje');
+  }
+  if (diff < 0) {
+    return (
+      color: AppColors.dateOverdue,
+      label: '${due.day} ${kPtMonthsShort[due.month - 1]}',
+    );
+  }
+  return (
+    color: AppColors.dateUpcoming,
+    label: '${due.day} ${kPtMonthsShort[due.month - 1]}',
+  );
+}
+
+TagChip dueDateTagChip(DateTime dueDate) {
+  final style = dueDateStyle(dueDate);
+  return TagChip(
+    label: style.label,
+    color: style.color,
+    hugeIcon: HugeIcons.strokeRoundedCalendar01,
+  );
+}
+
+/// Opção A — linha única: etiquetas · data · contadores na mesma faixa.
+class TaskMetaLine extends StatelessWidget {
+  final List<TaskLabel> labels;
+  final DateTime? dueDate;
+  final int subtasksDone;
+  final int subtasksTotal;
+  final int commentCount;
+  final String? projectName;
+  final EdgeInsetsGeometry padding;
+  final int maxLabels;
+
+  const TaskMetaLine({
+    super.key,
+    this.labels = const [],
+    this.dueDate,
+    this.subtasksDone = 0,
+    this.subtasksTotal = 0,
+    this.commentCount = 0,
+    this.projectName,
+    this.padding = const EdgeInsets.only(top: 4),
+    this.maxLabels = 3,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Widget>[];
+
+    if (projectName != null &&
+        projectName!.isNotEmpty &&
+        projectName != 'Sem projeto') {
+      items.add(Text(
+        projectName!,
+        style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ));
+    }
+
+    for (final l in labels.take(maxLabels)) {
+      items.add(TagChip(label: l.name, color: l.color));
+    }
+    if (labels.length > maxLabels) {
+      items.add(TagChip(
+        label: '+${labels.length - maxLabels}',
+        color: AppColors.textTertiary,
+        showIcon: false,
+      ));
+    }
+
+    if (dueDate != null) {
+      items.add(dueDateTagChip(dueDate!));
+    }
+
+    if (subtasksTotal > 0) {
+      items.add(_TaskMetaCounter(
+        icon: HugeIcons.strokeRoundedTaskDone01,
+        value: '$subtasksDone/$subtasksTotal',
+      ));
+    }
+
+    if (commentCount > 0) {
+      items.add(_TaskMetaCounter(
+        icon: HugeIcons.strokeRoundedComment01,
+        value: '$commentCount',
+      ));
+    }
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: padding,
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: items,
+      ),
+    );
+  }
+}
+
+class _TaskMetaCounter extends StatelessWidget {
+  final List<List<dynamic>> icon;
+  final String value;
+
+  const _TaskMetaCounter({required this.icon, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        HugeIcon(icon: icon, size: 12, color: AppColors.textTertiary),
+        const SizedBox(width: 3),
+        Text(value, style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+      ],
+    );
+  }
+}
+
 // ── Tag chip — ícone outline + texto, sem fundo ──────────────────────────────
 
 class TagChip extends StatelessWidget {
   final String label;
   final Color color;
   final bool showIcon;
+  final List<List<dynamic>>? hugeIcon;
   final double? maxWidth;
-  const TagChip(
-      {super.key,
-      required this.label,
-      required this.color,
-      this.showIcon = true,
-      this.maxWidth});
+  const TagChip({
+    super.key,
+    required this.label,
+    required this.color,
+    this.showIcon = true,
+    this.hugeIcon,
+    this.maxWidth,
+  });
+
+  List<List<dynamic>> get _icon =>
+      hugeIcon ?? HugeIcons.strokeRoundedTag01;
 
   @override
   Widget build(BuildContext context) {
@@ -1077,7 +1094,7 @@ class TagChip extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (showIcon) ...[
-          HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 11, color: color),
+          HugeIcon(icon: _icon, size: 11, color: color),
           const SizedBox(width: 4),
         ],
         Flexible(

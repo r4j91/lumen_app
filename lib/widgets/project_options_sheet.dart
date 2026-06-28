@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/haptic_service.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
+import '../theme/palette_colors.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../utils/project_icons.dart';
 
@@ -44,28 +45,7 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
   String? _selectedIcon;
   bool _saving = false;
 
-  static const _colors = [
-    Color(0xFF63C7D8),
-    Color(0xFF6F8FB8),
-    Color(0xFF84B98E),
-    Color(0xFF789C6B),
-    Color(0xFFC58D97),
-    Color(0xFFC58A72),
-    Color(0xFFA496C8),
-    Color(0xFF6F79B6),
-    Color(0xFFC7B38A),
-    Color(0xFFD3B36A),
-    Color(0xFF7F99A8),
-    Color(0xFF9CA3AF),
-    Color(0xFFF43F5E),
-    Color(0xFFEC4899),
-    Color(0xFFD946EF),
-    Color(0xFF06B6D4),
-    Color(0xFF10B981),
-    Color(0xFF84CC16),
-    Color(0xFFF59E0B),
-    Color(0xFFF97316),
-  ];
+  static final _colors = PaletteColors.projectColors;
 
   @override
   void initState() {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -255,13 +256,14 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
     final taskId = inserted['id'].toString();
 
     if (_labelIds.isNotEmpty) {
-      await supabase.from('task_labels').insert(
+      unawaited(supabase.from('task_labels').insert(
         _labelIds.map((lid) => {'task_id': taskId, 'label_id': lid}).toList(),
-      );
+      ));
     }
 
     if (_dueDate != null) {
-      NotificationService().scheduleTaskNotification(taskId, title, _dueDate!);
+      unawaited(NotificationService()
+          .scheduleTaskNotification(taskId, title, _dueDate!));
     }
 
     return taskId;
@@ -273,22 +275,21 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
     HapticService().taskCreated();
     setState(() => _saving = true);
 
-    try {
-      await _persistTask();
+    final messenger = ScaffoldMessenger.of(context);
+    final saveFuture = _persistTask();
 
-      if (mounted) {
-        Navigator.of(context).pop();
-        widget.onSaved?.call();
-      }
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    widget.onSaved?.call();
+
+    try {
+      await saveFuture;
     } catch (e) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erro ao salvar: $e'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.priorityHigh,
-        ));
-      }
+      messenger.showSnackBar(SnackBar(
+        content: Text('Erro ao salvar: $e'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.priorityHigh,
+      ));
     }
   }
 

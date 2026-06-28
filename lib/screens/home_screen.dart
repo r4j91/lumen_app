@@ -16,6 +16,7 @@ import 'task_detail_sheet.dart';
 import '../widgets/scroll_fade_overlay.dart';
 import '../widgets/pressable.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../services/task_sync.dart';
 import '../utils/project_icons.dart';
 
 class _HomeProject {
@@ -82,6 +83,13 @@ class HomeScreenState extends State<HomeScreen> {
     _loadUserName();
     _loadTasks();
     _loadProjects();
+    TaskSync.instance.addListener(reload);
+  }
+
+  @override
+  void dispose() {
+    TaskSync.instance.removeListener(reload);
+    super.dispose();
   }
 
   // HOME-REFRESH: chamado pelo RootScreen (main.dart, via GlobalKey) ao

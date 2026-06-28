@@ -11,6 +11,8 @@ import 'package:hugeicons/hugeicons.dart';
 import '../services/label_repository.dart';
 import '../services/section_repository.dart';
 import '../services/supabase_client.dart';
+import '../services/task_repository.dart';
+import '../services/task_sync.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/empty_state.dart';
@@ -38,6 +40,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   static const _sectionRepo = SectionRepository();
   // CORRIGIDO_ETAPA3B
   static const _labelRepo = LabelRepository();
+  final _repo = const TaskRepository();
 
   List<Task> _tasks = [];
   List<Task> _completedTasks = [];
@@ -73,6 +76,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     _loadPrefs();
     _loadTasks();
     _loadDisplayMode();
+    TaskSync.instance.addListener(_loadTasks);
+  }
+
+  @override
+  void dispose() {
+    TaskSync.instance.removeListener(_loadTasks);
+    super.dispose();
   }
 
   Future<void> _loadPrefs() async {
@@ -131,8 +141,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       // sempre caía no default 0 no construtor manual de Task abaixo.
       // const tasksSelectWithSubtaskExtras = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids), task_labels(labels(id, nome, cor))';
       // const tasksSelectFallback = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor))';
-      const tasksSelectWithSubtaskExtras = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids), task_labels(labels(id, nome, cor)), task_comments(count)';
-      const tasksSelectFallback = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor)), task_comments(count)';
+      const tasksSelectWithSubtaskExtras = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(id, titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids, valor), task_labels(labels(id, nome, cor)), task_comments(count)';
+      const tasksSelectFallback = 'id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, section_id, projects(nome), subtasks(id, titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor)), task_comments(count)';
       List<Map<String, dynamic>> rows;
       try {
         rows = await supabase
@@ -227,21 +237,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             return 0;
           })(),
           labels: labels,
-          subtasks: sub.map((s) => Subtask(
-            title: s['titulo'] as String,
-            description: s['descricao'] as String?,
-            done: s['concluida'] as bool? ?? false,
-            priority: switch (s['prioridade'] as String?) {
-              'high' => SubtaskPriority.high,
-              'medium' => SubtaskPriority.medium,
-              'low' => SubtaskPriority.low,
-              _ => null,
-            },
-            // ADICIONADO_ETAPA3A
-            dueDate: s['data_vencimento'] != null ? DateTime.tryParse(s['data_vencimento'] as String) : null,
-            // ADICIONADO_ETAPA3A
-            labelIds: ((s['label_ids'] as List?) ?? const []).map((e) => e.toString()).toList(),
-          )).toList(),
+          subtasks: sub
+              .map((s) => Subtask.fromJson(Map<String, dynamic>.from(s as Map)))
+              .toList(),
         );
       }).toList();
 
@@ -294,7 +292,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     await ctrl.closed;
     if (!undone) {
       try {
-        await supabase.from('tasks').delete().eq('id', task.id);
+        await _repo.deleteTask(task.id);
       } catch (e) {
         if (mounted) {
           setState(() => _tasks.insert(i.clamp(0, _tasks.length), task));
@@ -325,7 +323,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     final task = _completedTasks[i];
     setState(() => _completedTasks.removeAt(i));
     try {
-      await supabase.from('tasks').delete().eq('id', task.id);
+      await _repo.deleteTask(task.id);
     } catch (_) {
       if (mounted) setState(() => _completedTasks.insert(i.clamp(0, _completedTasks.length), task));
     }
@@ -649,45 +647,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
   // M5: cores/labels de data reaproveitadas da mesma lógica usada em
   // TaskTile._buildSubtaskChips (verde=hoje, vermelho=atrasado, amarelo=futuro).
-  static const _ptMonths = [
-    'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-    'jul', 'ago', 'set', 'out', 'nov', 'dez',
-  ];
-
-  // M5: linha de tarefa para o modo Lista — aditivo, não usado no modo Balões.
   Widget _buildTaskListRow(Task task) {
     final done = task.done;
     final subtaskDone = task.subtasks.where((s) => s.done).length;
     final subtaskTotal = task.subtasks.length;
-
-    Widget? dateChip;
-    if (task.dueDate != null) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final due = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
-      final diff = due.difference(today).inDays;
-      // COLORS-OLD: Color(0xFF7ECC49)/Color(0xFFDC4C3E)/Color(0xFFF0A830)
-      final Color color;
-      final String label;
-      if (diff == 0) {
-        color = AppColors.dateDueToday;
-        label = 'Hoje';
-      } else if (diff < 0) {
-        color = AppColors.dateOverdue;
-        label = '${due.day} ${_ptMonths[due.month - 1]}';
-      } else {
-        color = AppColors.dateUpcoming;
-        label = '${due.day} ${_ptMonths[due.month - 1]}';
-      }
-      dateChip = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
-      );
-    }
 
     final expanded = _expandedListIds.contains(task.id);
 
@@ -707,7 +670,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTaskListRowContent(task, done, subtaskDone, subtaskTotal, dateChip, expanded),
+          _buildTaskListRowContent(task, done, subtaskDone, subtaskTotal, expanded),
           if (expanded)
             for (var si = 0; si < task.subtasks.length; si++)
               _buildTaskListSubtaskRow(task, task.subtasks[si]),
@@ -736,7 +699,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     );
   }
 
-  Widget _buildTaskListRowContent(Task task, bool done, int subtaskDone, int subtaskTotal, Widget? dateChip, bool expanded) {
+  Widget _buildTaskListRowContent(Task task, bool done, int subtaskDone, int subtaskTotal, bool expanded) {
     // LONGPRESS-OLD: return Container(...) direto, sem GestureDetector.
     return GestureDetector(
       onLongPressStart: (d) => _openTaskListContextMenu(context, task, d.globalPosition),
@@ -837,43 +800,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                           style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                         ),
                       ),
-                    // BUG2-OLD: modo Lista nunca renderizava task.labels (já
-                    // populado pelo construtor manual em _loadTasks).
-                    if (task.labels.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: task.labels
-                              .take(3)
-                              .map((l) => TagChip(label: l.name, color: l.color))
-                              .toList(),
-                        ),
-                      ),
-                    if (subtaskTotal > 0 || dateChip != null || task.commentCount > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Row(
-                          children: [
-                            if (subtaskTotal > 0) ...[
-                              HugeIcon(icon: HugeIcons.strokeRoundedTaskDone01, size: 12, color: AppColors.textTertiary),
-                              const SizedBox(width: 3),
-                              Text('$subtaskDone/$subtaskTotal', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                              const SizedBox(width: 8),
-                            ],
-                            if (dateChip != null) ...[
-                              dateChip,
-                              const SizedBox(width: 8),
-                            ],
-                            if (task.commentCount > 0) ...[
-                              HugeIcon(icon: HugeIcons.strokeRoundedComment01, size: 12, color: AppColors.textTertiary),
-                              const SizedBox(width: 3),
-                              Text('${task.commentCount}', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                            ],
-                          ],
-                        ),
-                      ),
+                    TaskMetaLine(
+                      labels: task.labels,
+                      dueDate: task.dueDate,
+                      subtasksDone: subtaskDone,
+                      subtasksTotal: subtaskTotal,
+                      commentCount: task.commentCount,
+                    ),
                   ],
                 ),
               ),
@@ -982,6 +915,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     HapticService().lightImpact();
     final item = SubtaskItem(
       id: sub.id,
+      taskId: task.id,
+      order: sub.order,
       title: sub.title,
       description: sub.description,
       done: sub.done,
@@ -1002,73 +937,12 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   // M5-EXPAND: linha de subtarefa indentada, exibida quando o id da
   // tarefa pai está em _expandedListIds.
   // SUBTASK-TAP-OLD: sem InkWell/GestureDetector — toque não fazia nada.
-  static const _listSubtaskPtMonths = [
-    'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-    'jul', 'ago', 'set', 'out', 'nov', 'dez',
-  ];
-
-  Widget _listSubtaskMetaChip(Color color, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-          ),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _listSubtaskChips(Subtask sub) {
-    final chips = <Widget>[];
-
-    if (sub.dueDate != null) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final due = DateTime(sub.dueDate!.year, sub.dueDate!.month, sub.dueDate!.day);
-      final diff = due.difference(today).inDays;
-      // COLORS-OLD: Color(0xFF7ECC49)/Color(0xFFDC4C3E)/Color(0xFFF0A830)
-      final Color dotColor;
-      final String label;
-      if (diff == 0) {
-        dotColor = AppColors.dateDueToday;
-        label = 'Hoje';
-      } else if (diff < 0) {
-        dotColor = AppColors.dateOverdue;
-        label = '${due.day} ${_listSubtaskPtMonths[due.month - 1]}';
-      } else {
-        dotColor = AppColors.dateUpcoming;
-        label = '${due.day} ${_listSubtaskPtMonths[due.month - 1]}';
-      }
-      chips.add(_listSubtaskMetaChip(dotColor, label));
-    }
-
-    if (sub.labelIds.isNotEmpty) {
-      for (final id in sub.labelIds) {
-        final option = _allLabels.where((l) => l.id == id).firstOrNull;
-        if (option != null) {
-          chips.add(_listSubtaskMetaChip(option.color, option.name));
-        } else {
-          chips.add(_listSubtaskMetaChip(AppColors.textTertiary, id));
-        }
-      }
-    }
-
-    return chips;
+  List<TaskLabel> _subtaskLabels(Subtask sub) {
+    if (sub.labelIds.isEmpty) return const [];
+    return sub.labelIds
+        .map((id) => _allLabels.where((l) => l.id == id).firstOrNull)
+        .whereType<TaskLabel>()
+        .toList();
   }
 
   Widget _buildTaskListSubtaskRow(Task task, Subtask sub) {
@@ -1079,7 +953,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       SubtaskPriority.low => AppColors.subtaskPriorityLow,
       null => AppColors.textTertiary,
     };
-    final chips = _listSubtaskChips(sub);
+    final subLabels = _subtaskLabels(sub);
+    final hasDesc = sub.description != null && sub.description!.isNotEmpty;
+    final hasMeta = subLabels.isNotEmpty || sub.dueDate != null;
+    final centerTitle = !hasDesc && !hasMeta;
+
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () => _openSubtaskDetail(task, sub),
@@ -1092,19 +970,18 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              centerTitle ? CrossAxisAlignment.center : CrossAxisAlignment.start,
           children: [
-            // GESTURE-OLD: GestureDetector sem feedback visual
             Pressable(
               behavior: HitTestBehavior.opaque,
               onTap: () => _toggleSubtaskDone(task, sub),
               child: Container(
                 width: 18,
                 height: 18,
-                margin: const EdgeInsets.only(top: 1, right: 8),
+                margin: EdgeInsets.only(top: centerTitle ? 0 : 1, right: 8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  // COLORS-OLD: Color(0xFF22C55E)
                   color: sub.done ? AppColors.success : priColor.withValues(alpha: 0.08),
                   border: Border.all(
                     color: sub.done ? AppColors.success : priColor,
@@ -1119,6 +996,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     sub.title,
@@ -1130,10 +1008,26 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       decoration: sub.done ? TextDecoration.lineThrough : TextDecoration.none,
                     ),
                   ),
-                  if (chips.isNotEmpty)
+                  if (hasDesc)
                     Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        sub.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary.withValues(
+                            alpha: sub.done ? 0.55 : 0.85,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (hasMeta)
+                    TaskMetaLine(
+                      labels: subLabels,
+                      dueDate: sub.dueDate,
                       padding: const EdgeInsets.only(top: 6),
-                      child: Wrap(spacing: 5, runSpacing: 4, children: chips),
                     ),
                 ],
               ),
@@ -1162,6 +1056,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           showProject: false,
           // CORRIGIDO_ETAPA3B
           allLabels: _allLabels,
+          onSubtaskChanged: _loadTasks,
           onSubtaskToggled: (_) {},
           onCompleted: () => _toggleDone(i),
           onTap: () => showTaskDetailSheet(context, _tasks[i], onSaved: _loadTasks),
@@ -1502,6 +1397,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 showProject: false,
                 // CORRIGIDO_ETAPA3B
                 allLabels: _allLabels,
+                onSubtaskChanged: _loadTasks,
                 onSubtaskToggled: (_) {},
                 onCompleted: () => _toggleUndone(ci),
                 onTap: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),

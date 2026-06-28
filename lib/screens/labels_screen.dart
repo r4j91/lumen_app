@@ -1,22 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
+import '../theme/palette_colors.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-final _kColors = [
-  '#63C7D8', // Ocean Mist
-  '#6F8FB8', // Slate Blue
-  '#84B98E', // Sage Green
-  '#789C6B', // Moss
-  '#C58D97', // Dusty Rose
-  '#C58A72', // Terracotta Soft
-  '#A496C8', // Lavender Grey
-  '#6F79B6', // Muted Indigo
-  '#C7B38A', // Sand
-  '#D3B36A', // Soft Amber
-  '#7F99A8', // Steel Blue
-  '#9CA3AF', // Mist Grey
-];
+final _kColors = PaletteColors.labelHex;
 
 class LabelsScreen extends StatefulWidget {
   const LabelsScreen({super.key});

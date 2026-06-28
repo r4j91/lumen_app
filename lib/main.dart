@@ -16,14 +16,21 @@ import 'screens/inbox_screen.dart';
 import 'services/auth_service.dart';
 import 'services/haptic_service.dart';
 import 'services/notification_service.dart';
+import 'services/task_sync.dart';
 import 'widgets/responsive_layout.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await _bootstrap();
+  runApp(const StackedApp());
+}
 
+/// Evita acessar [Supabase.instance] antes do init ou após falha silenciosa.
+bool _supabaseReady = false;
+
+Future<void> _bootstrap() async {
   await initializeDateFormatting('pt_BR', null);
 
-  // Lock to portrait on mobile only
   if (!kIsWeb) {
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -31,22 +38,29 @@ Future<void> main() async {
     ]);
   }
 
-  // Load persisted theme before first frame so there's no flash.
   await ThemeProvider.instance.loadSaved();
-  HapticService(); // inicializa o singleton
-  await NotificationService().initialize();
+  HapticService();
 
-  await Supabase.initialize(
-    url: 'https://gbpoenvogrcqhcqfjldd.supabase.co',
-    publishableKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdicG9lbnZvZ3JjcWhjcWZqbGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjg1NTEsImV4cCI6MjA5NzEwNDU1MX0.xLTHtA1e1ia3s-2kwezcwIAD170b7Bc0L1fCTeNJNXM',
-    authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.implicit,
-      autoRefreshToken: true,
-    ),
-  );
+  try {
+    await NotificationService().initialize();
+  } catch (e, st) {
+    debugPrint('NotificationService init failed: $e\n$st');
+  }
 
-  runApp(const StackedApp());
+  try {
+    await Supabase.initialize(
+      url: 'https://gbpoenvogrcqhcqfjldd.supabase.co',
+      publishableKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdicG9lbnZvZ3JjcWhjcWZqbGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjg1NTEsImV4cCI6MjA5NzEwNDU1MX0.xLTHtA1e1ia3s-2kwezcwIAD170b7Bc0L1fCTeNJNXM',
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.implicit,
+        autoRefreshToken: true,
+      ),
+    );
+    _supabaseReady = true;
+  } catch (e, st) {
+    debugPrint('Supabase init failed: $e\n$st');
+  }
 }
 
 class StackedApp extends StatelessWidget {
@@ -81,6 +95,25 @@ class _AuthGateState extends State<_AuthGate> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_supabaseReady) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppColors.accent),
+              const SizedBox(height: 16),
+              Text(
+                'Conectando…',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return StreamBuilder<AuthState>(
       stream: _auth.authStateChanges,
       builder: (context, snapshot) {
@@ -156,8 +189,11 @@ class _RootScreenState extends State<RootScreen> {
   }
 
   void _onTaskCreated() {
-    _todayKey.currentState?.loadTasks();
-    _inboxKey.currentState?.loadTasks();
+    TaskSync.instance.notifyChanged();
+  }
+
+  void _onProjectCreated() {
+    _homeKey.currentState?.reload();
   }
 
   @override
@@ -170,6 +206,7 @@ class _RootScreenState extends State<RootScreen> {
         children: _screens,
       ),
       onTaskCreated: _onTaskCreated,
+      onProjectCreated: _onProjectCreated,
     );
   }
 }

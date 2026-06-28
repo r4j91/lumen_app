@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stacked CLI — atalhos locais do projeto.
-# Uso: stacked -sim [args extras do flutter run]
+# Uso: stacked -sim | stacked -iphone [--release] [-- <args flutter run>]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,12 +13,24 @@ Stacked — atalhos de desenvolvimento
   stacked -sim [-- <args flutter run>]
       Abre o Simulator (se precisar) e roda flutter run no iOS.
 
+  stacked -iphone [--release] [--install] [-- <args flutter run>]
+      Roda no iPhone físico conectado.
+      --release   Build de release (recomendado para usar SEM cabo USB)
+      --install   Instala release e sai (não mantém sessão flutter run)
+
   stacked devices
       Lista dispositivos Flutter disponíveis.
 
+Dicas iPhone físico:
+  • Debug (padrão) depende do cabo/sessão flutter run — ao tirar o cabo
+    o app pode fechar. Antes de desconectar, pressione "d" no terminal
+    (detach) OU use --release.
+  • --release instala um build que abre normalmente pelo ícone, sem cabo.
+
 Exemplos:
   stacked -sim
-  stacked -sim -- --dart-define=FOO=bar
+  stacked -iphone --release
+  stacked -iphone --install
 EOF
 }
 
@@ -43,6 +55,27 @@ resolve_ios_sim_id() {
   echo "$DEFAULT_IOS_SIM_ID"
 }
 
+resolve_iphone_id() {
+  if [[ -n "${STACKED_IPHONE_ID:-}" ]]; then
+    echo "$STACKED_IPHONE_ID"
+    return 0
+  fi
+
+  local line id
+  line="$(flutter devices 2>/dev/null | grep -i 'ios' | grep -vi 'simulator' | head -1 || true)"
+  if [[ -n "$line" ]]; then
+    id="$(echo "$line" | awk -F'•' '{print $2}' | xargs)"
+    if [[ -n "$id" ]]; then
+      echo "$id"
+      return 0
+    fi
+  fi
+
+  echo "Nenhum iPhone físico encontrado. Conecte o cabo e confie no computador." >&2
+  flutter devices >&2 || true
+  exit 1
+}
+
 boot_ios_simulator() {
   local sim_id="$1"
   xcrun simctl boot "$sim_id" 2>/dev/null || true
@@ -57,16 +90,58 @@ run_sim() {
   local sim_id
   sim_id="$(resolve_ios_sim_id)"
   boot_ios_simulator "$sim_id"
+  # Evita "FlutterEngine was already invoked" / tela preta quando uma sessão
+  # debug anterior ficou presa no simulador.
+  xcrun simctl terminate "$sim_id" com.roarns.stacked 2>/dev/null || true
+  sleep 0.5
   if [[ "${1:-}" == "--" ]]; then
     shift
   fi
   exec flutter run -d "$sim_id" "$@"
 }
 
+run_iphone() {
+  local release=0 install=0
+  local extra_args=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --release) release=1; shift ;;
+      --install) install=1; release=1; shift ;;
+      --)
+        shift
+        extra_args+=("$@")
+        break
+        ;;
+      *)
+        extra_args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  local device_id
+  device_id="$(resolve_iphone_id)"
+
+  if [[ "$install" -eq 1 ]]; then
+    exec flutter install --release -d "$device_id" "${extra_args[@]}"
+  fi
+
+  if [[ "$release" -eq 1 ]]; then
+    exec flutter run --release -d "$device_id" "${extra_args[@]}"
+  fi
+
+  exec flutter run -d "$device_id" "${extra_args[@]}"
+}
+
 case "${1:-}" in
   -sim|--sim)
     shift
     run_sim "$@"
+    ;;
+  -iphone|--iphone)
+    shift
+    run_iphone "$@"
     ;;
   devices)
     flutter devices

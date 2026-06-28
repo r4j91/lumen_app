@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import 'app_icon_screen.dart';
 import 'debug_anchored_menu_screen.dart';
 import 'project_row_preview_screen.dart';
+import 'task_meta_preview_screen.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class AppearanceScreen extends StatefulWidget {
@@ -55,6 +56,8 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
           _SectionLabel('Dev / Testes'),
           const SizedBox(height: 10),
           _buildProjectRowPreview(),
+          const SizedBox(height: 10),
+          _buildTaskMetaPreview(),
           const SizedBox(height: 10),
           _buildDebugRow(),
         ],
@@ -157,6 +160,47 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                   Text('Preview: linhas de projeto', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
                   const SizedBox(height: 2),
                   Text('Compare 4 opções visuais', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                ],
+              ),
+            ),
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textTertiary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskMetaPreview() {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const TaskMetaPreviewScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 20, color: AppColors.accent),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Preview: meta da tarefa', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text('Etiquetas, datas e contadores', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
                 ],
               ),
             ),

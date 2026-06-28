@@ -4,6 +4,7 @@ import '../models/task.dart';
 import '../services/haptic_service.dart';
 import '../services/supabase_client.dart';
 import '../services/task_repository.dart';
+import '../services/task_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_sheet.dart';
@@ -35,6 +36,7 @@ class UpcomingScreen extends StatefulWidget {
 
 class _UpcomingScreenState extends State<UpcomingScreen>
     with SingleTickerProviderStateMixin {
+  final _repo = const TaskRepository();
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   List<Task> _tasks = [];
@@ -64,10 +66,14 @@ class _UpcomingScreenState extends State<UpcomingScreen>
     _calendarHeight = Tween<double>(begin: _weekHeight, end: _monthHeight)
         .animate(CurvedAnimation(parent: _modeCtrl, curve: Curves.easeOutCubic));
     _loadTasks();
+    TaskSync.instance.addListener(_loadTasks);
   }
+
+  void loadTasks() => _loadTasks();
 
   @override
   void dispose() {
+    TaskSync.instance.removeListener(_loadTasks);
     _modeCtrl.dispose();
     super.dispose();
   }
@@ -207,7 +213,7 @@ class _UpcomingScreenState extends State<UpcomingScreen>
     await ctrl.closed;
     if (!undone) {
       try {
-        await supabase.from('tasks').delete().eq('id', task.id);
+        await _repo.deleteTask(task.id);
       } catch (e) {
         if (mounted) {
           setState(() => _tasks.add(task));

@@ -6,6 +6,7 @@ import '../services/haptic_service.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/palette_colors.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/modal_media_query.dart';
 import '../widgets/pressable.dart';
@@ -184,11 +185,7 @@ class _BrowseHomeState extends State<_BrowseHome> {
 
   // FIXED-COLOR: paleta de seleção de cor de projeto — fixa por definição,
   // não migra pra AppColors (regra explícita).
-  static const _colorPalette = [
-    Color(0xFF5FD3DC), Color(0xFF4D9FEC), Color(0xFFB18CF5), Color(0xFF8FD46B),
-    Color(0xFFF5A623), Color(0xFFEF5A5F), Color(0xFFFF85A1), Color(0xFF64D8A0),
-    Color(0xFFFFD166), Color(0xFF9B8EA8), Color(0xFF6EC6CA), Color(0xFFE07B54),
-  ];
+  static final _colorPalette = PaletteColors.projectColors;
 
   Future<void> _createProject() async {
     await Navigator.of(context, rootNavigator: true).push(

@@ -26,7 +26,7 @@ class _LogbookScreenState extends State<LogbookScreen> {
     try {
       final rows = await supabase
           .from('tasks')
-          .select('id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, recorrencia, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor))')
+          .select('id, titulo, descricao, prioridade, hora, ordem, concluida, data_vencimento, recorrencia, projects(nome), subtasks(id, titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids, valor), task_labels(labels(id, nome, cor))')
           .eq('concluida', true)
           .order('data_vencimento', ascending: false, nullsFirst: false)
           .order('ordem', ascending: false)

@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
 import '../services/supabase_client.dart';
+import '../services/task_repository.dart';
 import '../theme/app_colors.dart';
+import '../theme/palette_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_sheet.dart';
@@ -161,6 +163,7 @@ class _InlineProjectDetail extends StatefulWidget {
 }
 
 class _InlineProjectDetailState extends State<_InlineProjectDetail> {
+  final _repo = const TaskRepository();
   List<Task> _tasks = [];
   List<Task> _completedTasks = [];
   bool _loading = true;
@@ -191,7 +194,7 @@ class _InlineProjectDetailState extends State<_InlineProjectDetail> {
     try {
       final rows = await supabase
           .from('tasks')
-          .select('id, titulo, descricao, prioridade, hora, ordem, concluida, projects(nome), subtasks(titulo, descricao, concluida, ordem, prioridade), task_labels(labels(id, nome, cor))')
+          .select('id, titulo, descricao, prioridade, hora, ordem, concluida, projects(nome), subtasks(id, titulo, descricao, concluida, ordem, prioridade, data_vencimento, label_ids, valor), task_labels(labels(id, nome, cor))')
           .eq('project_id', widget.projectId)
           .order('concluida', ascending: true)
           .order('ordem');
@@ -225,12 +228,9 @@ class _InlineProjectDetailState extends State<_InlineProjectDetail> {
           time: r['hora'] as String?,
           description: r['descricao'] as String?,
           labels: labels,
-          subtasks: sub.map((s) => Subtask(
-            title: s['titulo'] as String,
-            description: s['descricao'] as String?,
-            done: s['concluida'] as bool? ?? false,
-            priority: switch (s['prioridade'] as String?) { 'high' => SubtaskPriority.high, 'medium' => SubtaskPriority.medium, 'low' => SubtaskPriority.low, _ => null },
-          )).toList(),
+          subtasks: sub
+              .map((s) => Subtask.fromJson(Map<String, dynamic>.from(s as Map)))
+              .toList(),
           done: r['concluida'] as bool? ?? false,
         );
       }).toList();
@@ -279,7 +279,7 @@ class _InlineProjectDetailState extends State<_InlineProjectDetail> {
     await ctrl.closed;
     if (!undone) {
       try {
-        await supabase.from('tasks').delete().eq('id', task.id);
+        await _repo.deleteTask(task.id);
       } catch (e) {
         if (mounted) {
           setState(() => _tasks.insert(index.clamp(0, _tasks.length), task));
@@ -320,7 +320,7 @@ class _InlineProjectDetailState extends State<_InlineProjectDetail> {
     final task = _completedTasks[i];
     setState(() => _completedTasks.removeAt(i));
     try {
-      await supabase.from('tasks').delete().eq('id', task.id);
+      await _repo.deleteTask(task.id);
     } catch (_) {
       if (mounted) setState(() => _completedTasks.insert(i.clamp(0, _completedTasks.length), task));
     }
@@ -634,11 +634,7 @@ class _AddProjectSheet extends StatefulWidget {
 }
 
 class _AddProjectSheetState extends State<_AddProjectSheet> {
-  static const _colors = [
-    Color(0xFF63C7D8), Color(0xFF6F8FB8), Color(0xFF84B98E), Color(0xFF789C6B),
-    Color(0xFFC58D97), Color(0xFFC58A72), Color(0xFFA496C8), Color(0xFF6F79B6),
-    Color(0xFFC7B38A), Color(0xFFD3B36A), Color(0xFF7F99A8), Color(0xFF9CA3AF),
-  ];
+  static final _colors = PaletteColors.projectColors;
 
   late final TextEditingController _nameCtrl;
   late final TextEditingController _descCtrl;

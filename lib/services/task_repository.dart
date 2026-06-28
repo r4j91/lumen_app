@@ -1,5 +1,6 @@
 import '../models/task.dart';
 import 'supabase_client.dart';
+import 'task_sync.dart';
 
 const _kSelect = '''
   id,
@@ -14,7 +15,7 @@ const _kSelect = '''
   project_id,
   section_id,
   projects ( nome ),
-  subtasks ( id, titulo, descricao, concluida, ordem, prioridade, valor ),
+  subtasks ( id, titulo, descricao, concluida, ordem, prioridade, valor, data_vencimento, label_ids ),
   task_labels ( labels ( id, nome, cor ) ),
   task_comments ( count )
 ''';
@@ -161,6 +162,7 @@ class TaskRepository {
 
   Future<void> deleteTask(String id) async {
     await supabase.from('tasks').delete().eq('id', id);
+    TaskSync.instance.notifyChanged();
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

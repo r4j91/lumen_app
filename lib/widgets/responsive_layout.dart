@@ -9,6 +9,7 @@ import '../services/haptic_service.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/palette_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_sheet.dart';
 import 'desktop_shell/desktop_app_shell.dart';
@@ -168,51 +169,83 @@ Widget _adaptBodyForScreenWidth(Widget body, double screenWidth) {
 
 // ── New project sheet (standalone, usable from FAB) ───────────────────────────
 
-Future<void> _showNewProjectSheet(BuildContext context, {VoidCallback? onCreated}) async {
-  final nameCtrl = TextEditingController();
-  try {
-    await showAppSheet(
-      context: context,
-      title: 'Novo projeto',
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              autofocus: true,
-              textCapitalization: TextCapitalization.sentences,
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
-              decoration: const InputDecoration(hintText: 'Nome do projeto'),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Builder(
-              builder: (ctx) => AppButton(
-                label: 'Criar projeto',
-                onPressed: () async {
-                  final name = nameCtrl.text.trim();
-                  if (name.isEmpty) return;
-                  HapticService().saved();
-                  final userId = supabase.auth.currentUser?.id;
-                  await supabase.from('projects').insert({
-                    'nome': name,
-                    if (userId != null) 'user_id': userId,
-                    'favorito': false,
-                  });
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  onCreated?.call();
-                },
-              ),
-            ),
-          ],
-        ),
+Future<void> _showNewProjectSheet(BuildContext context, {VoidCallback? onCreated}) {
+  return showAppSheet(
+    context: context,
+    title: 'Novo projeto',
+    scrollable: true,
+    child: _NewProjectSheetForm(onCreated: onCreated),
+  );
+}
+
+class _NewProjectSheetForm extends StatefulWidget {
+  final VoidCallback? onCreated;
+
+  const _NewProjectSheetForm({this.onCreated});
+
+  @override
+  State<_NewProjectSheetForm> createState() => _NewProjectSheetFormState();
+}
+
+class _NewProjectSheetFormState extends State<_NewProjectSheetForm> {
+  late final TextEditingController _nameCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) return;
+    HapticService().saved();
+    final userId = supabase.auth.currentUser?.id;
+    if (!mounted) return;
+    Navigator.pop(context);
+    try {
+      await supabase.from('projects').insert({
+        'nome': name,
+        if (userId != null) 'user_id': userId,
+        'favorito': false,
+        'cor': PaletteColors.defaultHex,
+      });
+      widget.onCreated?.call();
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _nameCtrl,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+            decoration: const InputDecoration(hintText: 'Nome do projeto'),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(
+            label: 'Criar projeto',
+            onPressed: _submit,
+          ),
+        ],
       ),
     );
-  } finally {
-    nameCtrl.dispose();
   }
 }
 

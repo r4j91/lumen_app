@@ -381,9 +381,34 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     }
 
 
-    _subtasks = (widget.task?.subtasks ?? [])
-        .map((s) => SubtaskItem(title: s.title, description: s.description, done: s.done, priority: s.priority, valor: s.valor))
-        .toList();
+    _subtasks = (widget.task?.subtasks ?? []).asMap().entries.map((entry) {
+      final i = entry.key;
+      final s = entry.value;
+      DateTime? stDueDate;
+      TimeOfDay? stDueTime;
+      if (s.dueDate != null) {
+        final parsed = s.dueDate!;
+        if (parsed.hour != 0 || parsed.minute != 0) {
+          stDueTime = TimeOfDay(hour: parsed.hour, minute: parsed.minute);
+          stDueDate = DateTime(parsed.year, parsed.month, parsed.day);
+        } else {
+          stDueDate = DateTime(parsed.year, parsed.month, parsed.day);
+        }
+      }
+      return SubtaskItem(
+        id: s.id,
+        taskId: widget.task?.id,
+        order: s.order != 0 ? s.order : i,
+        title: s.title,
+        description: s.description,
+        done: s.done,
+        priority: s.priority,
+        valor: s.valor,
+        labelIds: s.labelIds.toSet(),
+        dueDate: stDueDate,
+        dueTime: stDueTime,
+      );
+    }).toList();
     _recurrence = widget.task?.recurrence;
     if (!widget.asDialog) _draggableCtrl.addListener(_onDragChange);
     _titleCtrl.addListener(() { if (mounted) setState(() {}); });
@@ -495,7 +520,11 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   }
 
   void _addSubtask() {
-    final item = SubtaskItem(title: '');
+    final item = SubtaskItem(
+      title: '',
+      taskId: widget.task?.id,
+      order: _subtasks.length,
+    );
     setState(() => _subtasks.add(item));
     WidgetsBinding.instance.addPostFrameCallback((_) => item.focus.requestFocus());
   }
@@ -527,8 +556,9 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
         currentProject = projects.firstWhere((p) => p.name == widget.task!.project);
       } catch (_) {}
 
-      // Reload subtasks fresh from DB so toggles made in the tile are reflected
-      await _reloadSubtasksFromDb();
+      // Sync ids/done state without replacing controllers — avoids races
+      // with an open SubtaskDetailSheet and preserves in-memory edits.
+      await _ensureSubtaskIdsFromDb();
     }
 
     if (!mounted) return;
@@ -565,6 +595,28 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     } catch (_) {}
   }
 
+  /// Assigns row ids and syncs done flags without disposing controllers.
+  Future<void> _ensureSubtaskIdsFromDb() async {
+    if (_isNew || widget.task == null) return;
+    try {
+      final stRows = await supabase
+          .from('subtasks')
+          .select('id, concluida, ordem')
+          .eq('task_id', widget.task!.id)
+          .order('ordem');
+      if (!mounted) return;
+      for (int i = 0; i < _subtasks.length && i < stRows.length; i++) {
+        final row = stRows[i] as Map<String, dynamic>;
+        final item = _subtasks[i];
+        item.id ??= row['id']?.toString();
+        item.taskId ??= widget.task!.id;
+        item.order = row['ordem'] as int? ?? i;
+        item.done = row['concluida'] as bool? ?? item.done;
+      }
+      if (mounted) setState(() {});
+    } catch (_) {}
+  }
+
   /// Recarrega _subtasks direto do banco (extraído de dentro de _loadMeta
   /// para ser reutilizável — usado também pelo callback onGenerated do
   /// gerador de parcelas).
@@ -597,6 +649,8 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
           : <String>{};
       return SubtaskItem(
         id: s['id']?.toString(),
+        taskId: widget.task!.id,
+        order: s['ordem'] as int? ?? 0,
         title: s['titulo'] as String,
         description: s['descricao'] as String?,
         done: s['concluida'] as bool? ?? false,
@@ -2789,6 +2843,9 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
               setState(() {
                 final item = _subtasks.removeAt(oldIndex);
                 _subtasks.insert(newIndex, item);
+                for (int i = 0; i < _subtasks.length; i++) {
+                  _subtasks[i].order = i;
+                }
               });
             },
             itemBuilder: (context, i) {

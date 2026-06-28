@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 import '../services/notification_service.dart';
 import '../services/task_repository.dart';
+import '../services/task_sync.dart';
 import '../services/supabase_client.dart';
 import '../screens/task_detail_sheet.dart';
 import '../theme/app_colors.dart';
@@ -38,10 +39,12 @@ class InboxScreenState extends State<InboxScreen> {
     _scrollCtrl = ScrollController();
     _loadPrefs();
     loadTasks();
+    TaskSync.instance.addListener(loadTasks);
   }
 
   @override
   void dispose() {
+    TaskSync.instance.removeListener(loadTasks);
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -94,7 +97,7 @@ class InboxScreenState extends State<InboxScreen> {
     final task = _tasks[i];
     setState(() => _tasks.removeAt(i));
     try {
-      await supabase.from('tasks').delete().eq('id', task.id);
+      await _repo.deleteTask(task.id);
     } catch (_) {
       if (mounted) setState(() => _tasks.insert(i.clamp(0, _tasks.length), task));
     }
@@ -121,7 +124,7 @@ class InboxScreenState extends State<InboxScreen> {
     final task = _completedTasks[i];
     setState(() => _completedTasks.removeAt(i));
     try {
-      await supabase.from('tasks').delete().eq('id', task.id);
+      await _repo.deleteTask(task.id);
     } catch (_) {
       if (mounted) setState(() => _completedTasks.insert(i.clamp(0, _completedTasks.length), task));
     }

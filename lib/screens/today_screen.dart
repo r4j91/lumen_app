@@ -13,6 +13,7 @@ import '../widgets/swipeable_task_tile.dart';
 import '../widgets/task_tile.dart';
 import '../services/notification_service.dart';
 import '../services/task_repository.dart';
+import '../services/task_sync.dart';
 import '../services/supabase_client.dart';
 import 'task_detail_sheet.dart';
 import '../widgets/scroll_fade_overlay.dart';
@@ -38,6 +39,7 @@ class TodayScreen extends StatefulWidget {
 }
 
 class TodayScreenState extends State<TodayScreen> {
+  final _repo = const TaskRepository();
   List<Task> _tasks = [];
   List<Task> _completedTasks = [];
   bool _loading = true;
@@ -54,6 +56,7 @@ class TodayScreenState extends State<TodayScreen> {
     _scrollCtrl = ScrollController();
     _loadPrefs();
     _loadTasks();
+    TaskSync.instance.addListener(_loadTasks);
   }
 
   void scrollToTop() {
@@ -79,6 +82,7 @@ class TodayScreenState extends State<TodayScreen> {
 
   @override
   void dispose() {
+    TaskSync.instance.removeListener(_loadTasks);
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -192,7 +196,7 @@ class TodayScreenState extends State<TodayScreen> {
     await ctrl.closed;
     if (!undone) {
       try {
-        await supabase.from('tasks').delete().eq('id', task.id);
+        await _repo.deleteTask(task.id);
         NotificationService().cancelTaskNotification(task.id);
       } catch (e) {
         if (mounted) {
@@ -251,7 +255,7 @@ class TodayScreenState extends State<TodayScreen> {
     await ctrl.closed;
     if (!undone) {
       try {
-        await supabase.from('tasks').delete().eq('id', task.id);
+        await _repo.deleteTask(task.id);
       } catch (e) {
         if (mounted) {
           setState(() => _completedTasks.insert(index.clamp(0, _completedTasks.length), task));

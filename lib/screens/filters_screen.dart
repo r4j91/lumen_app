@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../services/supabase_client.dart';
 import '../services/task_repository.dart';
+import '../services/task_sync.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -45,6 +46,7 @@ class FiltersScreen extends StatefulWidget {
 }
 
 class _FiltersScreenState extends State<FiltersScreen> {
+  final _repo = const TaskRepository();
   // Dashboard stats
   bool _loading = true;
   int _overdueCount = 0;
@@ -62,6 +64,20 @@ class _FiltersScreenState extends State<FiltersScreen> {
   void initState() {
     super.initState();
     _loadStats();
+    TaskSync.instance.addListener(_onTasksChanged);
+  }
+
+  @override
+  void dispose() {
+    TaskSync.instance.removeListener(_onTasksChanged);
+    super.dispose();
+  }
+
+  void _onTasksChanged() {
+    _loadStats();
+    if (_view != _FilterView.dashboard) {
+      _loadFilter(_view);
+    }
   }
 
   static Color _parseProjectColor(String? hex) {
@@ -214,9 +230,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
   }
 
   Future<void> _deleteTask(int i) async {
-    await supabase.from('tasks').delete().eq('id', _filterTasks[i].id);
-    _loadFilter(_view);
-    _loadStats();
+    await _repo.deleteTask(_filterTasks[i].id);
   }
 
   Future<void> _toggleSubtask(int ti, int si) async {

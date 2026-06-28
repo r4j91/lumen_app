@@ -9,6 +9,7 @@ import '../../anchored_select_menu.dart';
 import '../../popover_style.dart';
 import '../subtask_item.dart';
 import '../task_detail_widgets.dart';
+import '../../task_tile.dart' show TagChip;
 import 'task_date_picker_sheet.dart';
 import 'task_labels_picker_sheet.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -152,20 +153,28 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
   }
 
   Future<void> _persistValor(double? value) async {
-    final id = widget.item.id;
-    if (id == null) return;
     try {
-      await _repo.updateSubtaskFields(id, {'valor': value});
+      await _repo.persistSubtask(
+        id: widget.item.id,
+        taskId: widget.item.taskId,
+        order: widget.item.order,
+        fields: {'valor': value},
+        onIdResolved: (resolved) => widget.item.id = resolved,
+      );
     } catch (e) {
       _showSaveError();
     }
   }
 
   Future<void> _persistField(String column, String value) async {
-    final id = widget.item.id;
-    if (id == null) return;
     try {
-      await _repo.updateSubtaskFields(id, {column: value.isEmpty ? null : value});
+      await _repo.persistSubtask(
+        id: widget.item.id,
+        taskId: widget.item.taskId,
+        order: widget.item.order,
+        fields: {column: value.isEmpty ? null : value},
+        onIdResolved: (resolved) => widget.item.id = resolved,
+      );
     } catch (e) {
       _showSaveError();
     }
@@ -174,18 +183,16 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
   /// Mirrors current selections back onto the shared SubtaskItem and writes
   /// priority/date/labels straight to the DB. Called whenever this sheet
   /// closes, regardless of how (X, swipe, tap outside, back).
-  void _applyAndPersist() {
+  Future<void> _applyAndPersist() async {
     widget.item.priority = _priority;
     widget.item.labelIds = _labelIds;
     widget.item.dueDate = _dueDate;
     widget.item.dueTime = _dueTime;
     widget.onChanged();
-    _persistMeta();
+    await _persistMeta();
   }
 
   Future<void> _persistMeta() async {
-    final id = widget.item.id;
-    if (id == null) return;
     String? dueDateStr;
     if (_dueDate != null) {
       dueDateStr = _dueTime != null
@@ -194,16 +201,22 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
           : '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}';
     }
     try {
-      await _repo.updateSubtaskFields(id, {
-        'prioridade': switch (_priority) {
-          SubtaskPriority.high => 'high',
-          SubtaskPriority.medium => 'medium',
-          SubtaskPriority.low => 'low',
-          null => null,
+      await _repo.persistSubtask(
+        id: widget.item.id,
+        taskId: widget.item.taskId,
+        order: widget.item.order,
+        fields: {
+          'prioridade': switch (_priority) {
+            SubtaskPriority.high => 'high',
+            SubtaskPriority.medium => 'medium',
+            SubtaskPriority.low => 'low',
+            null => null,
+          },
+          'data_vencimento': dueDateStr,
+          'label_ids': _labelIds.isEmpty ? null : _labelIds.toList(),
         },
-        'data_vencimento': dueDateStr,
-        'label_ids': _labelIds.isEmpty ? null : _labelIds.toList(),
-      });
+        onIdResolved: (resolved) => widget.item.id = resolved,
+      );
     } catch (e) {
       _showSaveError();
     }
@@ -254,21 +267,39 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
   }
 
   Future<void> _showDateSheet() async {
-    final result = await showModalBottomSheet<DatePickerResult>(
+    DatePickerResult? lastResult;
+    await showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
       isDismissible: true,
       enableDrag: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => TaskDatePickerSheet(initialDate: _dueDate, initialTime: _dueTime),
+      builder: (_) => TaskDatePickerSheet(
+        initialDate: _dueDate,
+        initialTime: _dueTime,
+        // BUG-DATE-SUBTASK: o picker confirma via onChanged + pop() sem valor;
+        // depender do retorno do await deixava result sempre null.
+        onChanged: (r) {
+          lastResult = r;
+          if (!mounted) return;
+          setState(() {
+            _dueDate = r.date;
+            _dueTime = r.time;
+          });
+        },
+      ),
     );
-    if (result == null || !mounted) return;
+    if (!mounted) return;
+    if (lastResult == null) return;
     setState(() {
-      _dueDate = result.date;
-      _dueTime = result.time;
+      _dueDate = lastResult!.date;
+      _dueTime = lastResult!.time;
     });
-    _persistMeta();
+    widget.item.dueDate = _dueDate;
+    widget.item.dueTime = _dueTime;
+    widget.onChanged();
+    await _persistMeta();
   }
 
   Future<void> _showLabelsMenu() async {
@@ -289,16 +320,19 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
   Widget _buildLabelsValue() {
     final selected = widget.labels.where((l) => _labelIds.contains(l.id)).toList();
     if (selected.isEmpty) return const SizedBox.shrink();
+    final extra = selected.length - 1;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          selected.length == 1 ? selected.first.name : '${selected.length} etiquetas',
-          style: TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(width: 6),
-        Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: selected.first.color)),
+        ...selected.take(2).map((l) => Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: TagChip(label: l.name, color: l.color),
+            )),
+        if (extra > 0)
+          Text(
+            '+$extra',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
       ],
     );
   }
@@ -324,23 +358,9 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
     return Wrap(
       spacing: 6,
       runSpacing: 4,
-      children: selected.map((l) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-          decoration: BoxDecoration(
-            color: l.color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 11, color: l.color),
-              const SizedBox(width: 4),
-              Text(l.name, style: TextStyle(fontSize: 11, color: l.color.withValues(alpha: 0.9), fontWeight: FontWeight.w500)),
-            ],
-          ),
-        );
-      }).toList(),
+      children: selected
+          .map((l) => TagChip(label: l.name, color: l.color))
+          .toList(),
     );
   }
 

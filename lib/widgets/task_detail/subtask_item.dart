@@ -10,6 +10,10 @@ class SubtaskItem {
   /// first time and this subtask gets persisted. Used to decide whether a
   /// field edit can be written straight to the DB or must stay in-memory.
   String? id;
+  /// Parent task id — used to persist metadata before/without a row id.
+  String? taskId;
+  /// Position within the parent task — pairs with [taskId] for fallback updates.
+  int order;
   bool done;
   SubtaskPriority? priority;
   Set<String> labelIds;
@@ -23,6 +27,8 @@ class SubtaskItem {
 
   SubtaskItem({
     this.id,
+    this.taskId,
+    this.order = 0,
     required String title,
     String? description,
     this.done = false,

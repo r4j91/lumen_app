@@ -1,5 +1,6 @@
 import '../models/subtask.dart';
 import 'supabase_client.dart';
+import 'task_sync.dart';
 
 class SubtaskRepository {
   const SubtaskRepository();
@@ -65,9 +66,65 @@ class SubtaskRepository {
   /// Retries without `data_vencimento`/`label_ids` only if those specific
   /// columns are missing (undeployed migration) — any other error is
   /// rethrown so the caller can surface it instead of losing data silently.
+  /// Persists partial field updates. Uses row [id] when available; otherwise
+  /// falls back to task_id + ordem and writes the resolved id back via
+  /// [onIdResolved].
+  Future<void> persistSubtask({
+    String? id,
+    String? taskId,
+    int? order,
+    required Map<String, dynamic> fields,
+    void Function(String resolvedId)? onIdResolved,
+  }) async {
+    if (fields.isEmpty) return;
+
+    if (id != null) {
+      await updateSubtaskFields(id, fields);
+      return;
+    }
+
+    if (taskId == null || order == null) return;
+
+    try {
+      await supabase
+          .from('subtasks')
+          .update(fields)
+          .eq('task_id', taskId)
+          .eq('ordem', order);
+      TaskSync.instance.notifyChanged();
+      final row = await supabase
+          .from('subtasks')
+          .select('id')
+          .eq('task_id', taskId)
+          .eq('ordem', order)
+          .maybeSingle();
+      final resolved = row?['id']?.toString();
+      if (resolved != null) onIdResolved?.call(resolved);
+    } catch (e) {
+      // ignore: avoid_print
+      print('[SubtaskRepository] persistSubtask($taskId/$order) falhou: $e');
+      final msg = e.toString();
+      final isMissingColumn =
+          msg.contains('data_vencimento') || msg.contains('label_ids');
+      if (!isMissingColumn) rethrow;
+      final base = Map<String, dynamic>.from(fields)
+        ..remove('data_vencimento')
+        ..remove('label_ids');
+      if (base.isEmpty) rethrow;
+      await supabase
+          .from('subtasks')
+          .update(base)
+          .eq('task_id', taskId)
+          .eq('ordem', order);
+      TaskSync.instance.notifyChanged();
+      rethrow;
+    }
+  }
+
   Future<void> updateSubtaskFields(String id, Map<String, dynamic> fields) async {
     try {
       await supabase.from('subtasks').update(fields).eq('id', id);
+      TaskSync.instance.notifyChanged();
     } catch (e) {
       // CORRIGIDO_AUTOSAVE_DATA: o erro original era engolido silenciosamente
       // antes de decidir o fallback, mascarando a causa real (ex: coluna
@@ -94,6 +151,7 @@ class SubtaskRepository {
 
   Future<void> toggleSubtaskDone(String id, bool done) async {
     await supabase.from('subtasks').update({'concluida': done}).eq('id', id);
+    TaskSync.instance.notifyChanged();
   }
 
   Future<void> deleteSubtask(String id) async {
