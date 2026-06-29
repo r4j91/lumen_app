@@ -1,7 +1,13 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-/// Notifica telas em cache (IndexedStack) quando tarefas mudam em qualquer aba.
+/// Notifica telas em cache ([IndexedStack]) quando tarefas mudam em qualquer aba.
+///
+/// Contrato atual: cada tela guarda sua própria lista e recarrega do Supabase
+/// ao ouvir [notifyChanged]. Debounce de 180 ms evita rajadas de queries.
+///
+/// Migração futura: substituir por Riverpod `ref.invalidate` — ver
+/// [DATA_LAYER.md](DATA_LAYER.md).
 class TaskSync {
   TaskSync._();
   static final TaskSync instance = TaskSync._();

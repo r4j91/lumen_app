@@ -6,12 +6,9 @@ import 'package:flutter/physics.dart';
 import '../screens/task_detail_sheet.dart';
 import '../screens/search_screen.dart';
 import '../services/haptic_service.dart';
-import '../services/supabase_client.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../theme/palette_colors.dart';
-import '../widgets/app_button.dart';
-import '../widgets/app_sheet.dart';
+import '../widgets/new_project_sheet.dart';
 import 'desktop_shell/desktop_app_shell.dart';
 import 'pressable.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -86,7 +83,9 @@ class ResponsiveLayout extends StatelessWidget {
     return Builder(builder: (context) {
       void openNewTask() => showNewTaskSheet(context, onSaved: onTaskCreated);
       void openSearch() => showSearchScreen(context);
-      void openNewProject() => unawaited(_showNewProjectSheet(context, onCreated: onProjectCreated));
+      void openNewProject() => unawaited(
+            showNewProjectSheet(context, onCreated: onProjectCreated),
+          );
 
       // ── Desktop ───────────────────────────────────────────────────────────
       if (screenWidth >= 1024) {
@@ -104,12 +103,9 @@ class ResponsiveLayout extends StatelessWidget {
 
       // ── Mobile / Tablet ─────────────────────────────────────────────────────
       final bottomPadding = MediaQuery.of(context).padding.bottom;
-      const pillHeight = 62.0;
-      const fabSize = 56.0;
-      const fabGap = 10.0;
-      const sideMargin = 14.0;
-      final pillMarginBottom = bottomPadding + 12.0;
-      final totalBarHeight = pillMarginBottom + pillHeight + fabGap + fabSize;
+      const sideMargin = AppLayout.fabSideMargin;
+      final pillMarginBottom = bottomPadding + AppLayout.bottomNavPillMargin;
+      final totalBarHeight = AppLayout.totalBottomChromeHeight(context);
 
       return Scaffold(
         backgroundColor: AppColors.background,
@@ -127,7 +123,7 @@ class ResponsiveLayout extends StatelessWidget {
                   left: sideMargin,
                   right: sideMargin,
                   bottom: pillMarginBottom,
-                  height: pillHeight,
+                  height: AppLayout.bottomNavPillHeight,
                   child: _LiquidGlassPill(
                     items: _navItems,
                     selectedIndex: selectedIndex,
@@ -137,9 +133,9 @@ class ResponsiveLayout extends StatelessWidget {
                 // ── FAB — expandable menu, above pill ───────────────────────
                 Positioned(
                   right: sideMargin,
-                  bottom: pillMarginBottom + pillHeight + fabGap,
-                  width: fabSize,
-                  height: fabSize,
+                  bottom: pillMarginBottom + AppLayout.bottomNavPillHeight + AppLayout.fabGap,
+                  width: AppLayout.fabSize,
+                  height: AppLayout.fabSize,
                   child: _ExpandableFAB(
                     onNewTask: openNewTask,
                     onNewProject: openNewProject,
@@ -165,88 +161,6 @@ Widget _adaptBodyForScreenWidth(Widget body, double screenWidth) {
       child: body,
     ),
   );
-}
-
-// ── New project sheet (standalone, usable from FAB) ───────────────────────────
-
-Future<void> _showNewProjectSheet(BuildContext context, {VoidCallback? onCreated}) {
-  return showAppSheet(
-    context: context,
-    title: 'Novo projeto',
-    scrollable: true,
-    child: _NewProjectSheetForm(onCreated: onCreated),
-  );
-}
-
-class _NewProjectSheetForm extends StatefulWidget {
-  final VoidCallback? onCreated;
-
-  const _NewProjectSheetForm({this.onCreated});
-
-  @override
-  State<_NewProjectSheetForm> createState() => _NewProjectSheetFormState();
-}
-
-class _NewProjectSheetFormState extends State<_NewProjectSheetForm> {
-  late final TextEditingController _nameCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameCtrl = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty) return;
-    HapticService().saved();
-    final userId = supabase.auth.currentUser?.id;
-    if (!mounted) return;
-    Navigator.pop(context);
-    try {
-      await supabase.from('projects').insert({
-        'nome': name,
-        if (userId != null) 'user_id': userId,
-        'favorito': false,
-        'cor': PaletteColors.defaultHex,
-      });
-      widget.onCreated?.call();
-    } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _nameCtrl,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _submit(),
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
-            decoration: const InputDecoration(hintText: 'Nome do projeto'),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          AppButton(
-            label: 'Criar projeto',
-            onPressed: _submit,
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ── FAB action descriptor ─────────────────────────────────────────────────────

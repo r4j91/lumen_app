@@ -1,10 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../services/haptic_service.dart';
-import '../services/supabase_client.dart';
+import '../services/project_repository.dart';
 import '../theme/app_colors.dart';
 import '../theme/palette_colors.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../utils/project_icons.dart';
+import 'popover_style.dart';
 
 class ProjectSheetData {
   final String id;
@@ -39,6 +41,8 @@ class ProjectOptionsSheet extends StatefulWidget {
 }
 
 class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
+  static const _projectRepo = ProjectRepository();
+
   _SheetPage _page = _SheetPage.menu;
   late TextEditingController _nameCtrl;
   late Color _selectedColor;
@@ -63,18 +67,14 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
 
   Future<void> _loadProject() async {
     try {
-      final row = await supabase
-          .from('projects')
-          .select('nome, cor, icone')
-          .eq('id', widget.project.id)
-          .maybeSingle();
-      if (!mounted || row == null) return;
+      final details = await _projectRepo.fetchProjectDetails(widget.project.id);
+      if (!mounted || details == null) return;
       setState(() {
-        _nameCtrl.text = row['nome'] as String? ?? widget.project.name;
-        if (row['cor'] != null) {
-          _selectedColor = AppColors.parseHex(row['cor'] as String?);
+        _nameCtrl.text = details.name.isNotEmpty ? details.name : widget.project.name;
+        if (details.colorHex != null) {
+          _selectedColor = AppColors.parseHex(details.colorHex);
         }
-        _selectedIcon = row['icone'] as String? ?? _selectedIcon;
+        _selectedIcon = details.iconName ?? _selectedIcon;
       });
     } catch (_) {}
   }
@@ -95,19 +95,12 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
     try {
       final hex =
           '#${_selectedColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
-      try {
-        await supabase.from('projects').update({
-          'nome': _nameCtrl.text.trim(),
-          'cor': hex,
-          if (_selectedIcon != null) 'icone': _selectedIcon,
-        }).eq('id', widget.project.id);
-      } catch (e) {
-        if (!e.toString().contains('icone')) rethrow;
-        await supabase.from('projects').update({
-          'nome': _nameCtrl.text.trim(),
-          'cor': hex,
-        }).eq('id', widget.project.id);
-      }
+      await _projectRepo.updateProjectDetails(
+        id: widget.project.id,
+        name: _nameCtrl.text.trim(),
+        colorHex: hex,
+        iconName: _selectedIcon,
+      );
       widget.onEdited();
       if (mounted) setState(() => _saving = false);
       return true;
@@ -139,45 +132,28 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCupertinoDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceVariant,
-        title: Text(
-          'Excluir projeto?',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Excluir projeto?'),
         content: Text(
           'Isso excluirá "$_displayName" e todas as suas tarefas permanentemente.',
-          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
+            child: const Text('Cancelar'),
           ),
-          TextButton(
+          CupertinoDialogAction(
+            isDestructiveAction: true,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'Excluir',
-              style: TextStyle(
-                color: AppColors.priorityHigh,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: const Text('Excluir'),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
-    await supabase.from('projects').delete().eq('id', widget.project.id);
+    await _projectRepo.deleteProject(widget.project.id);
     if (mounted) {
       Navigator.of(context, rootNavigator: true).pop();
       widget.onDeleted();
@@ -209,7 +185,8 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final view = View.of(context);
+    final bottomInset = view.padding.bottom / view.devicePixelRatio;
     final maxHeight = MediaQuery.of(context).size.height * 0.88;
 
     return Material(
@@ -220,24 +197,22 @@ class _ProjectOptionsSheetState extends State<ProjectOptionsSheet> {
           decorationColor: Colors.transparent,
         ),
         child: Padding(
-          padding: EdgeInsets.only(bottom: bottomInset),
-          child: Container(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildHandle(),
-                _buildHeader(),
-                Flexible(child: _buildPage()),
-                SizedBox(
-                  height: bottomInset > 0 ? 8 : 24,
-                ),
-              ],
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + bottomInset,
+          ),
+          child: LiquidPanel(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHandle(),
+                  _buildHeader(),
+                  Flexible(child: _buildPage()),
+                  const SizedBox(height: 12),
+                ],
+              ),
             ),
           ),
         ),

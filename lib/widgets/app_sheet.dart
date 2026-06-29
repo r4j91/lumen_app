@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
-import 'package:hugeicons/hugeicons.dart';
+import 'collapsible_section_header.dart';
 
 /// Standard bottom sheet container with drag handle, title row, and body.
 ///
@@ -192,31 +192,11 @@ class CompletedSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return CollapsibleSectionHeader(
+      title: 'Concluídas',
+      count: count,
+      expanded: expanded,
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 16, 10),
-        child: Row(
-          children: [
-            AnimatedRotation(
-              turns: expanded ? 0.25 : 0,
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOut,
-              child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textTertiary),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'Concluídas ($count)',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textTertiary,
-                letterSpacing: 0.1,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

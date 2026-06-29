@@ -2,21 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../models/task.dart';
 import '../services/haptic_service.dart';
+import '../services/project_repository.dart';
 import '../services/supabase_client.dart';
+import '../services/task_repository.dart';
+import '../services/task_sync.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
 import '../widgets/modal_media_query.dart' show ModalSheetRoute;
 import '../widgets/project_options_sheet.dart';
 import '../widgets/task_tile.dart' show TagChip;
-import 'browse_screen.dart' show UserPill, HeaderLiquidPill, SettingsSheet, NotificationsSheet;
+import '../widgets/settings/settings.dart';
 import 'productivity_screen.dart' show showProductivitySheet;
 import 'project_detail_screen.dart';
 import 'task_detail_sheet.dart';
 import '../widgets/scroll_fade_overlay.dart';
 import '../widgets/pressable.dart';
 import 'package:hugeicons/hugeicons.dart';
-import '../services/task_sync.dart';
 import '../utils/project_icons.dart';
 
 class _HomeProject {
@@ -50,8 +53,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  // Estado inicial — será expandido nas próximas etapas
-  String _userName = '';
+  static const _projectRepo = ProjectRepository();
+  static const _taskRepo = TaskRepository();
+
   bool _loading = true;
 
   // Próxima tarefa prioritária do dia + agregados do card "Hoje". Não há
@@ -76,6 +80,7 @@ class HomeScreenState extends State<HomeScreen> {
   List<_HomeProject> _projects = [];
   bool _loadingProjects = true;
   bool _projectsExpanded = true;
+  final _scrollCtrl = ScrollController();
 
   @override
   void initState() {
@@ -89,7 +94,27 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     TaskSync.instance.removeListener(reload);
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _toggleProjectsExpanded() {
+    final wasExpanded = _projectsExpanded;
+    HapticService().selectionClick();
+    setState(() => _projectsExpanded = !wasExpanded);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollCtrl.hasClients) return;
+      final pos = _scrollCtrl.position;
+      final nearBottom =
+          pos.maxScrollExtent <= 0 || pos.pixels >= pos.maxScrollExtent - 120;
+      if (!wasExpanded || nearBottom) {
+        _scrollCtrl.animateTo(
+          pos.maxScrollExtent,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
   }
 
   // HOME-REFRESH: chamado pelo RootScreen (main.dart, via GlobalKey) ao
@@ -113,32 +138,12 @@ class HomeScreenState extends State<HomeScreen> {
         return;
       }
       final now = DateTime.now();
-      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final todayStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
-      // ICON-OLD: select sem 'icone' — coluna não existe ainda no banco
-      // (confirmado via grep, ver PASSO 0). Tenta com 'icone'; se a coluna
-      // não existir, cai no fallback sem ela (mesmo padrão de
-      // tasksSelectWithSubtaskExtras/Fallback em project_detail_screen.dart).
-      List projRows;
-      try {
-        projRows = await supabase.from('projects').select('id, nome, cor, icone').eq('user_id', userId).order('nome');
-      } catch (e) {
-        if (!e.toString().contains('icone')) rethrow;
-        projRows = await supabase.from('projects').select('id, nome, cor').eq('user_id', userId).order('nome');
-      }
-
-      final results = await Future.wait([
-        supabase.from('tasks').select('project_id').eq('user_id', userId).eq('concluida', false),
-        supabase
-            .from('tasks')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('concluida', false)
-            .gt('data_vencimento', todayStr),
-      ]);
-
-      final taskRows = results[0] as List;
-      final upcomingRows = results[1] as List;
+      final projRows = await _projectRepo.fetchProjectRowsForUser(userId);
+      final taskRows = await _taskRepo.fetchPendingTaskProjectIds(userId);
+      final upcomingCount = await _taskRepo.countUpcomingTasks(userId, todayStr);
 
       final countMap = <String, int>{};
       var inboxCount = 0;
@@ -158,9 +163,9 @@ class HomeScreenState extends State<HomeScreen> {
           id: id,
           name: name,
           taskCount: countMap[id] ?? 0,
-          // AppColors.parseHex já existe e é o mesmo usado em
-          // browse_screen.dart — reaproveitado em vez de parse manual.
-          color: r['cor'] != null ? AppColors.parseHex(r['cor'] as String?) : _folderColorFromName(name),
+          color: r['cor'] != null
+              ? AppColors.parseHex(r['cor'] as String?)
+              : _folderColorFromName(name),
           iconName: r['icone'] as String?,
         );
       }).toList();
@@ -169,7 +174,7 @@ class HomeScreenState extends State<HomeScreen> {
         setState(() {
           _projects = projects;
           _inboxCount = inboxCount;
-          _upcomingCount = upcomingRows.length;
+          _upcomingCount = upcomingCount;
           _loadingProjects = false;
         });
       }
@@ -191,13 +196,6 @@ class HomeScreenState extends State<HomeScreen> {
     return palette[name.codeUnits.fold(0, (a, b) => a + b) % palette.length];
   }
 
-  // TASK-NEXT-OLD: _nextTask buscava a pendente mais prioritária de
-  // qualquer data. Trocado por _overdueTask: tarefa atrasada (data <
-  // hoje, não concluída), mais antiga primeiro. Duas queries: agregado
-  // "Hoje" (exatamente hoje, feitas+pendentes) + atrasada mais antiga.
-  static const _taskSelect =
-      'id, titulo, descricao, prioridade, concluida, data_vencimento, hora, task_labels(labels(id, nome, cor)), projects(nome)';
-
   Future<void> _loadTasks() async {
     try {
       final userId = supabase.auth.currentUser?.id;
@@ -206,32 +204,16 @@ class HomeScreenState extends State<HomeScreen> {
         return;
       }
       final now = DateTime.now();
-      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final todayStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
-      final results = await Future.wait([
-        supabase.from('tasks').select(_taskSelect).eq('user_id', userId).eq('data_vencimento', todayStr),
-        supabase
-            .from('tasks')
-            .select(_taskSelect)
-            .eq('user_id', userId)
-            .eq('concluida', false)
-            .lt('data_vencimento', todayStr)
-            .order('data_vencimento', ascending: true)
-            .limit(1),
-      ]);
-
-      final todayRows = results[0] as List;
-      final overdueRows = results[1] as List;
-
-      final todayTasks = todayRows.map((r) => Task.fromJson(r)).toList();
-      final done = todayTasks.where((t) => t.done).length;
-      final overdueTask = overdueRows.isNotEmpty ? Task.fromJson(overdueRows.first) : null;
+      final summary = await _taskRepo.fetchHomeTaskSummary(userId: userId, todayStr: todayStr);
 
       if (mounted) {
         setState(() {
-          _todayTotal = todayTasks.length;
-          _todayDone = done;
-          _overdueTask = overdueTask;
+          _todayTotal = summary.todayTotal;
+          _todayDone = summary.todayDone;
+          _overdueTask = summary.overdueTask;
           _loadingTasks = false;
         });
       }
@@ -244,20 +226,7 @@ class HomeScreenState extends State<HomeScreen> {
   // apelido > primeiro nome > parte local do email — lido direto de
   // userMetadata (síncrono, sem fetch a tabela profiles).
   Future<void> _loadUserName() async {
-    final meta = supabase.auth.currentUser?.userMetadata ?? {};
-    final apelido = (meta['apelido'] as String? ?? '').trim();
-    final nome = (meta['nome'] as String? ?? '').trim();
-    final userName = apelido.isNotEmpty
-        ? apelido
-        : nome.isNotEmpty
-            ? nome.split(' ').first
-            : supabase.auth.currentUser?.email?.split('@').first ?? '';
-    if (mounted) {
-      setState(() {
-        _userName = userName;
-        _loading = false;
-      });
-    }
+    if (mounted) setState(() => _loading = false);
   }
 
   // ── SAUDAÇÃO DINÂMICA ───────────────────────────────
@@ -319,7 +288,7 @@ class HomeScreenState extends State<HomeScreen> {
   // ── BUILD ────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).padding.bottom + 88;
+    final bottomInset = AppLayout.homeDockBottomInset(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _loading
@@ -334,6 +303,7 @@ class HomeScreenState extends State<HomeScreen> {
               color: AppColors.accent,
               child: ScrollFadeOverlay(
                 child: CustomScrollView(
+                controller: _scrollCtrl,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
@@ -342,17 +312,17 @@ class HomeScreenState extends State<HomeScreen> {
                       children: [
                         _buildHeader(),
                         _buildGreeting(context),
-                        SizedBox(height: AppSpacing.xl),
+                        SizedBox(height: AppSpacing.lg),
                         if (_loadingTasks)
                           const Padding(
-                            padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                            padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
                             child: Center(child: CupertinoActivityIndicator()),
                           )
                         else ...[
                           _buildOverdueCard(context),
                           _buildTodayCard(context),
                         ],
-                        SizedBox(height: AppSpacing.xl),
+                        SizedBox(height: AppSpacing.lg),
                         _buildShortcutsGrid(),
                         _buildProjectsList(context),
                       ],
@@ -431,7 +401,7 @@ class HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$_greeting, $_userName',
+            _greeting,
             style: textTheme.headlineMedium?.copyWith(letterSpacing: -0.3),
           ),
           SizedBox(height: AppSpacing.xs),
@@ -797,73 +767,96 @@ class HomeScreenState extends State<HomeScreen> {
   // HOME-PROJECTS-OLD: Padding solta, sem container/fundo/borda — seção
   // visualmente "flutuando" diferente dos cards de tarefa atrasada/hoje.
   Widget _buildProjectsList(BuildContext context) {
+    final projectCount = _projects.length;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, 0,
+        AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0,
       ),
       child: Container(
         decoration: _liquidGlassDecoration(context),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md + 1, vertical: AppSpacing.md,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md + 1, AppSpacing.md, AppSpacing.md + 1, AppSpacing.sm,
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Text(
-                  'Projetos',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const Spacer(),
-                // GESTURE-OLD: GestureDetector sem feedback visual
-                Pressable(
-                  // VERTODOS-FIX: agora alterna expandir/colapsar lista de
-                  // projetos inline, como um menu — sem tela de destino.
-                  onTap: () {
-                    HapticService().selectionClick();
-                    setState(() => _projectsExpanded = !_projectsExpanded);
-                  },
-                  child: Row(
-                    children: [
-                      Text(_projectsExpanded ? 'Ver menos' : 'Ver todos', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      const SizedBox(width: 2),
-                      AnimatedRotation(
-                        turns: _projectsExpanded ? 0.25 : 0,
-                        duration: const Duration(milliseconds: 200),
-                        child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 16, color: AppColors.textSecondary),
+            GestureDetector(
+              onTap: _toggleProjectsExpanded,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    AnimatedRotation(
+                      turns: _projectsExpanded ? 0.25 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedArrowRight01,
+                        size: 18,
+                        color: AppColors.textSecondary,
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Projetos',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          if (!_projectsExpanded && projectCount > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                '$projectCount ${projectCount == 1 ? 'projeto' : 'projetos'}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_projectsExpanded) ...[
+              SizedBox(height: AppSpacing.sm),
+              if (_loadingProjects)
+                const Center(child: CupertinoActivityIndicator())
+              else
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: Column(
+                    children: [
+                      for (int i = 0; i < _projects.length; i++) ...[
+                        if (i > 0)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: AppColors.textTertiary.withValues(alpha: 0.12),
+                          ),
+                        _buildProjectRow(_projects[i]),
+                      ],
+                      if (_projects.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                          child: Text(
+                            'Nenhum projeto ainda',
+                            style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+                          ),
+                        ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: AppSpacing.md),
-            if (_loadingProjects)
-              const Center(child: CupertinoActivityIndicator())
-            else
-              AnimatedSize(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                // VERTODOS-FIX2: "Ver todos" agora é um menu expansível de
-                // fato — colapsado esconde a lista inteira, expandido mostra
-                // todos os projetos (antes só limitava a 6, nunca minimizava).
-                child: _projectsExpanded
-                    ? Column(
-                        children: [
-                          for (int i = 0; i < _projects.length; i++) ...[
-                            if (i > 0)
-                              Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: AppColors.textTertiary.withValues(alpha: 0.12),
-                              ),
-                            _buildProjectRow(_projects[i]),
-                          ],
-                        ],
-                      )
-                    : const SizedBox.shrink(),
-              ),
+            ],
           ],
         ),
       ),

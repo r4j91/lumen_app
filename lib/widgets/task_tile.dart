@@ -57,8 +57,8 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
   bool _workspaceLabelsLoaded = false;
   bool _expanded = false;
 
-  late final AnimationController _expandCtrl;
-  late final Animation<double> _expandAnim;
+  AnimationController? _expandCtrl;
+  Animation<double>? _expandAnim;
 
   late List<bool> _subtasksDone;
 
@@ -75,20 +75,26 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
 
   bool _animating = false;
 
+  void _ensureExpandController() {
+    if (_expandCtrl != null) return;
+    _expandCtrl = AnimationController(
+      duration: const Duration(milliseconds: 220),
+      vsync: this,
+    );
+    _expandAnim = CurvedAnimation(
+      parent: _expandCtrl!,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _subtasksDone = widget.task.subtasks.map((s) => s.done).toList();
     _strikethrough = widget.task.done;
 
-    _expandCtrl = AnimationController(
-      duration: const Duration(milliseconds: 220),
-      vsync: this,
-    );
-    _expandAnim = CurvedAnimation(
-        parent: _expandCtrl,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic);
+    if (widget.task.hasSubtasks) _ensureExpandController();
 
     _collapseCtrl = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -147,6 +153,9 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
   void didUpdateWidget(TaskTile old) {
     super.didUpdateWidget(old);
     final newStates = widget.task.subtasks.map((s) => s.done).toList();
+    if (!old.task.hasSubtasks && widget.task.hasSubtasks) {
+      _ensureExpandController();
+    }
     if (old.task.id != widget.task.id ||
         newStates.length != _subtasksDone.length ||
         !listEquals(newStates, _subtasksDone)) {
@@ -188,20 +197,21 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
   }
 
   void _toggleExpand() {
+    _ensureExpandController();
     HapticService().selectionClick();
     setState(() {
       _expanded = !_expanded;
       if (_expanded) {
-        _expandCtrl.forward();
+        _expandCtrl!.forward();
       } else {
-        _expandCtrl.reverse();
+        _expandCtrl!.reverse();
       }
     });
   }
 
   @override
   void dispose() {
-    _expandCtrl.dispose();
+    _expandCtrl?.dispose();
     _collapseCtrl.dispose();
     _completionCtrl.dispose();
     _exitCtrl.dispose();
@@ -310,9 +320,9 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                   ],
                 ),
                 // ── Inline subtask list ──────────────────────────────────
-                if (task.hasSubtasks)
+                if (task.hasSubtasks && _expandAnim != null)
                   SizeTransition(
-                    sizeFactor: _expandAnim,
+                    sizeFactor: _expandAnim!,
                     alignment: Alignment.topCenter,
                     child: SubtaskList(
                       subtasks: task.subtasks,

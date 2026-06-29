@@ -6,8 +6,10 @@ import '../services/task_repository.dart';
 import '../services/task_sync.dart';
 import '../services/supabase_client.dart';
 import '../screens/task_detail_sheet.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../widgets/anchored_select_menu.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/swipeable_task_tile.dart';
@@ -32,6 +34,7 @@ class InboxScreenState extends State<InboxScreen> {
   bool _showCompleted = true;
   bool _completedExpanded = false;
   late final ScrollController _scrollCtrl;
+  final _optionsKey = GlobalKey();
 
   @override
   void initState() {
@@ -147,50 +150,29 @@ class InboxScreenState extends State<InboxScreen> {
     }
   }
 
-  void _showOptionsMenu(BuildContext ctx) {
-    final renderBox = ctx.findRenderObject() as RenderBox;
-    final offset = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
-
-    showMenu<String>(
-      context: ctx,
-      color: AppColors.surfaceVariant,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      position: RelativeRect.fromLTRB(
-        offset.dx + size.width - 180,
-        offset.dy + size.height + 4,
-        16,
-        0,
-      ),
+  Future<void> _showOptionsMenu() async {
+    final result = await showAnchoredSelectMenu(
+      context: context,
+      anchorKey: _optionsKey,
       items: [
-        PopupMenuItem(
-          value: 'toggle_completed',
-          child: Row(
-            children: [
-              HugeIcon(
-                icon: _showCompleted
-                    ? HugeIcons.strokeRoundedViewOff
-                    : HugeIcons.strokeRoundedView,
-                size: 17,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                _showCompleted ? 'Ocultar concluídas' : 'Mostrar concluídas',
-                style: TextStyle(fontSize: 13.5, color: AppColors.textPrimary),
-              ),
-            ],
-          ),
+        AnchoredMenuItem(
+          id: 'toggle_completed',
+          label: _showCompleted ? 'Ocultar concluídas' : 'Mostrar concluídas',
+          hugeIcon: _showCompleted
+              ? HugeIcons.strokeRoundedViewOff
+              : HugeIcons.strokeRoundedView,
+          iconColor: AppColors.textSecondary,
         ),
       ],
-    ).then((value) {
-      if (value == 'toggle_completed') _setShowCompleted(!_showCompleted);
-    });
+    );
+    if (result == 'toggle_completed') {
+      _setShowCompleted(!_showCompleted);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).padding.bottom + 88;
+    final bottomInset = AppLayout.bottomListInset(context);
 
     return RefreshIndicator(
       color: AppColors.accent,
@@ -219,12 +201,11 @@ class InboxScreenState extends State<InboxScreen> {
                     ],
                   ),
                 ),
-                Builder(
-                  builder: (ctx) => IconButton(
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textSecondary),
-                    onPressed: () => _showOptionsMenu(ctx),
-                    tooltip: 'Opções',
-                  ),
+                IconButton(
+                  key: _optionsKey,
+                  icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textSecondary),
+                  onPressed: _showOptionsMenu,
+                  tooltip: 'Opções',
                 ),
               ],
             ),

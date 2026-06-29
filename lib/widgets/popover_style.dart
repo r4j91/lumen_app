@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_durations.dart';
 
 /// Visual tokens shared by all popover and context-menu overlays in the app.
 /// Import this instead of duplicating values across components.
@@ -8,8 +9,23 @@ abstract class PopoverStyle {
   static const double radius      = 20.0;
   static const double blurSigma   = 20.0;
   static const double bgAlpha     = 0.78;
-  static const Duration animDuration = Duration(milliseconds: 150);
+  static const Duration animDuration = AppDurations.popover;
   static const double scaleBegin  = 0.90;
+
+  /// Shared top→bottom highlight gradient for Liquid Glass borders.
+  static const LinearGradient borderGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0x4DFFFFFF),
+      Color(0x26FFFFFF),
+      Color(0x1FFFFFFF),
+    ],
+    stops: [0.0, 0.45, 1.0],
+  );
+
+  static Shader borderGradientShader(Rect rect) =>
+      borderGradient.createShader(rect);
 
   /// The two layered drop-shadows used under every popover card.
   static List<BoxShadow> get shadows => [
@@ -58,16 +74,7 @@ class PopoverBorderPainter extends CustomPainter {
     final paint = Paint()
       ..style       = PaintingStyle.stroke
       ..strokeWidth = 1.0
-      ..shader      = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0x4DFFFFFF), // topo  ~30% white
-          Color(0x26FFFFFF), // meio  ~15% white
-          Color(0x1FFFFFFF), // base  ~12% white
-        ],
-        stops: [0.0, 0.45, 1.0],
-      ).createShader(rect);
+      ..shader      = PopoverStyle.borderGradientShader(rect);
 
     canvas.drawRRect(rrect, paint);
   }
@@ -139,16 +146,7 @@ class LiquidPanelBorderPainter extends CustomPainter {
     final paint = Paint()
       ..style       = PaintingStyle.stroke
       ..strokeWidth = 1.0
-      ..shader      = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0x4DFFFFFF), // top   ~30%
-          Color(0x26FFFFFF), // mid   ~15%
-          Color(0x1FFFFFFF), // base  ~12%
-        ],
-        stops: [0.0, 0.45, 1.0],
-      ).createShader(rect);
+      ..shader      = PopoverStyle.borderGradientShader(rect);
 
     if (drawBottom) {
       canvas.drawRRect(borderRadius.toRRect(rect), paint);

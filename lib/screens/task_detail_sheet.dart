@@ -1,13 +1,12 @@
 import 'dart:math' as math;
 import 'dart:ui';
-import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/section.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
 import '../services/haptic_service.dart';
-import '../services/notification_service.dart';
+import '../services/task_detail_persistence.dart';
 import '../services/section_repository.dart';
 import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
@@ -18,7 +17,9 @@ import '../widgets/task_detail/sheets/task_labels_picker_sheet.dart';
 import '../widgets/task_detail/sheets/task_priority_picker_sheet.dart';
 import '../widgets/anchored_select_menu.dart';
 import '../widgets/task_detail/sheets/task_project_picker_sheet.dart';
-import '../widgets/task_detail/subtask_editor.dart';
+import '../widgets/task_detail/task_detail_comments_section.dart';
+import '../widgets/task_detail/task_detail_description_field.dart';
+import '../widgets/task_detail/task_detail_subtasks_list.dart';
 import '../widgets/task_detail/subtask_item.dart';
 import '../widgets/task_detail/task_detail_widgets.dart';
 import 'quick_add_task_sheet.dart';
@@ -240,7 +241,6 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   final _labelsChipKey    = GlobalKey();
   final _projectChipKey   = GlobalKey();
   final _recurChipKey     = GlobalKey();
-  bool _descFocused = false;
 
   bool get _isNew => widget.task == null;
   bool get _isLightAccent => AppColors.accent.computeLuminance() > 0.5;
@@ -259,96 +259,27 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   // continua sendo o caminho de criação inicial.
   Future<void> _autosavePriority() async {
     if (_isNew) return;
-    final prioStr = switch (_priority) {
-      Priority.high => 'high',
-      Priority.medium => 'medium',
-      Priority.low => 'low',
-      null => null,
-    };
-    try {
-      await supabase.from('tasks').update({'prioridade': prioStr}).eq('id', widget.task!.id);
-    } catch (e) {
-      // ignore: avoid_print
-      print('[TaskDetail] autosave prioridade falhou: $e');
-    }
+    await TaskDetailPersistence.autosavePriority(
+      taskId: widget.task!.id,
+      priority: _priority,
+    );
   }
-
-  // HORA-SYNC-OLD: só atualizava data_vencimento
-  // Future<void> _autosaveDueDate() async {
-  //   if (_isNew) return;
-  //   String? dueDateStr;
-  //   if (_dueDate != null) {
-  //     if (_dueTime != null) {
-  //       dueDateStr = DateTime(
-  //         _dueDate!.year, _dueDate!.month, _dueDate!.day,
-  //         _dueTime!.hour, _dueTime!.minute,
-  //       ).toIso8601String();
-  //     } else {
-  //       dueDateStr = '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}';
-  //     }
-  //   }
-  //   try {
-  //     await supabase.from('tasks').update({'data_vencimento': dueDateStr}).eq('id', widget.task!.id);
-  //   } catch (e) {
-  //     // ignore: avoid_print
-  //     print('[TaskDetail] autosave data_vencimento falhou: $e');
-  //   }
-  // }
 
   Future<void> _autosaveDueDate() async {
     if (_isNew || widget.task?.id == null) return;
-
-    String? dueDateStr;
-    String? horaStr;
-
-    if (_dueDate != null) {
-      if (_dueTime != null) {
-        final full = DateTime(
-          _dueDate!.year, _dueDate!.month, _dueDate!.day,
-          _dueTime!.hour, _dueTime!.minute,
-        );
-        dueDateStr = full.toIso8601String();
-        // Sincronizar hora no formato HH:mm (mesmo formato que outras partes do app esperam em Task.time)
-        horaStr = '${_dueTime!.hour.toString().padLeft(2, '0')}:'
-            '${_dueTime!.minute.toString().padLeft(2, '0')}';
-      } else {
-        dueDateStr = '${_dueDate!.year}-'
-            '${_dueDate!.month.toString().padLeft(2, '0')}-'
-            '${_dueDate!.day.toString().padLeft(2, '0')}';
-        horaStr = null; // sem hora — limpar o campo
-      }
-    }
-
-    try {
-      await supabase
-          .from('tasks')
-          .update({
-            'data_vencimento': dueDateStr,
-            'hora': horaStr, // HORA-SYNC: manter em sincronia
-          })
-          .eq('id', widget.task!.id);
-    } catch (e) {
-      // ignore: avoid_print
-      print('[TaskDetail] autosave falhou: $e');
-    }
+    await TaskDetailPersistence.autosaveDueDate(
+      taskId: widget.task!.id,
+      dueDate: _dueDate,
+      dueTime: _dueTime,
+    );
   }
 
   Future<void> _autosaveLabels() async {
     if (_isNew) return;
-    final taskId = widget.task!.id;
-    try {
-      // Etiquetas de tasks são sincronizadas via tabela de junção
-      // task_labels (não existe coluna label_ids em tasks).
-      await supabase.from('task_labels').delete().eq('task_id', taskId);
-      if (_labelIds.isNotEmpty) {
-        await supabase.from('task_labels').insert(
-          _labelIds.map((lid) => {'task_id': taskId, 'label_id': lid}).toList(),
-        );
-      }
-    } catch (e) {
-      // ignore: avoid_print
-      print('[TaskDetail] autosave etiquetas falhou: $e');
-    }
+    await TaskDetailPersistence.autosaveLabels(
+      taskId: widget.task!.id,
+      labelIds: _labelIds,
+    );
   }
 
   @override
@@ -411,11 +342,6 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     }).toList();
     _recurrence = widget.task?.recurrence;
     if (!widget.asDialog) _draggableCtrl.addListener(_onDragChange);
-    _titleCtrl.addListener(() { if (mounted) setState(() {}); });
-    _commentCtrl.addListener(() { if (mounted) setState(() {}); });
-    _descFocusNode.addListener(() {
-      if (mounted) setState(() => _descFocused = _descFocusNode.hasFocus);
-    });
     _loadMeta();
     // COMMENT-LOAD: carregar comentários ao abrir
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadComments());
@@ -685,34 +611,23 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   Future<void> _sendComment() async {
     final text = _commentCtrl.text.trim();
     if (text.isEmpty || widget.task == null) return;
-    final userId = supabase.auth.currentUser?.id;
     try {
-      await supabase.from('task_comments').insert({
-        'task_id': widget.task!.id,
-        'conteudo': text,
-        if (userId != null) 'user_id': userId,
-      });
+      await TaskDetailCommentsService.sendComment(taskId: widget.task!.id, text: text);
       _commentCtrl.clear();
       FocusScope.of(context).unfocus();
-      HapticService().selectionClick();
       widget.onSaved?.call();
-      _loadComments(); // recarregar lista após enviar
+      _loadComments();
     } catch (_) {}
   }
 
-  // COMMENT-LOAD: carrega os comentários existentes da tarefa.
   Future<void> _loadComments() async {
     if (_isNew || widget.task?.id == null) return;
     setState(() => _loadingComments = true);
     try {
-      final rows = await supabase
-          .from('task_comments')
-          .select('id, conteudo, created_at, user_id')
-          .eq('task_id', widget.task!.id)
-          .order('created_at', ascending: true);
+      final rows = await TaskDetailCommentsService.loadComments(widget.task!.id);
       if (mounted) {
         setState(() {
-          _comments = List<Map<String, dynamic>>.from(rows);
+          _comments = rows;
           _loadingComments = false;
         });
       }
@@ -721,15 +636,6 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
       // ignore: avoid_print
       print('[COMMENT] erro ao carregar: $e');
     }
-  }
-
-  String _formatCommentDate(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'agora';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}min atrás';
-    if (diff.inHours < 24) return '${diff.inHours}h atrás';
-    return '${dt.day}/${dt.month}/${dt.year}';
   }
 
   Future<void> _save() async {
@@ -742,128 +648,20 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     setState(() => _saving = true);
 
     try {
-      final prioStr = switch (_priority) {
-        Priority.high => 'high',
-        Priority.medium => 'medium',
-        Priority.low => 'low',
-        null => null,
-      };
-
-      String? dueDateStr;
-      if (_dueDate != null) {
-        if (_dueTime != null) {
-          final dt = DateTime(
-            _dueDate!.year, _dueDate!.month, _dueDate!.day,
-            _dueTime!.hour, _dueTime!.minute,
-          );
-          dueDateStr = dt.toIso8601String();
-        } else {
-          dueDateStr = '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}';
-        }
-      }
-
-      final payload = {
-        'titulo': _titleCtrl.text.trim(),
-        'descricao': _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-        'prioridade': prioStr,
-        'project_id': _project?.id,
-        // ADICIONADO_SECAO_PROJETO: persistido junto com project_id.
-        'section_id': _sectionId,
-        'data_vencimento': dueDateStr,
-        // HORA-SYNC: manter em sincronia com data_vencimento
-        'hora': _dueTime != null
-            ? '${_dueTime!.hour.toString().padLeft(2, '0')}:'
-                '${_dueTime!.minute.toString().padLeft(2, '0')}'
-            : null,
-        'recorrencia': _recurrence?.toJsonString(),
-      };
-
-      String taskId;
-
-      if (_isNew) {
-        final userId = supabase.auth.currentUser?.id;
-        // ignore: avoid_print
-        print('[TaskDetail] inserting new task — user=$userId');
-        final inserted = await supabase
-            .from('tasks')
-            .insert({...payload, if (userId != null) 'user_id': userId})
-            .select('id')
-            .single();
-        taskId = inserted['id'].toString();
-      } else {
-        taskId = widget.task!.id;
-        // ignore: avoid_print
-        print('[TaskDetail] updating task $taskId');
-        await supabase.from('tasks').update(payload).eq('id', taskId);
-      }
-
-      // Sync labels
-      await supabase.from('task_labels').delete().eq('task_id', taskId);
-      if (_labelIds.isNotEmpty) {
-        await supabase.from('task_labels').insert(
-          _labelIds.map((lid) => {'task_id': taskId, 'label_id': lid}).toList(),
-        );
-      }
-
-      // Sync subtasks — delete all then re-insert in current order
-      await supabase.from('subtasks').delete().eq('task_id', taskId);
-      final subtaskRows = <Map<String, dynamic>>[];
-      for (int i = 0; i < _subtasks.length; i++) {
-        final st = _subtasks[i];
-        final title = st.ctrl.text.trim();
-        if (title.isEmpty) continue;
-        final desc = st.descCtrl.text.trim();
-        String? stDueDateStr;
-        if (st.dueDate != null) {
-          if (st.dueTime != null) {
-            stDueDateStr = DateTime(
-              st.dueDate!.year, st.dueDate!.month, st.dueDate!.day,
-              st.dueTime!.hour, st.dueTime!.minute,
-            ).toIso8601String();
-          } else {
-            stDueDateStr = '${st.dueDate!.year}-${st.dueDate!.month.toString().padLeft(2, '0')}-${st.dueDate!.day.toString().padLeft(2, '0')}';
-          }
-        }
-        subtaskRows.add({
-          'task_id': taskId,
-          'titulo': title,
-          'descricao': desc.isEmpty ? null : desc,
-          'concluida': st.done,
-          'ordem': i,
-          'prioridade': switch (st.priority) {
-            SubtaskPriority.high => 'high',
-            SubtaskPriority.medium => 'medium',
-            SubtaskPriority.low => 'low',
-            null => null,
-          },
-          // Requires migrations: ALTER TABLE subtasks ADD COLUMN IF NOT EXISTS data_vencimento timestamptz;
-          // ALTER TABLE subtasks ADD COLUMN IF NOT EXISTS label_ids text[];
-          'data_vencimento': stDueDateStr,
-          'label_ids': st.labelIds.isEmpty ? null : st.labelIds.toList(),
-        });
-      }
-      if (subtaskRows.isNotEmpty) {
-        try {
-          await supabase.from('subtasks').insert(subtaskRows);
-        } catch (_) {
-          // Fallback: retry without extended fields if columns don't exist yet
-          final baseRows = subtaskRows.map((r) {
-            final m = Map<String, dynamic>.from(r);
-            m.remove('data_vencimento');
-            m.remove('label_ids');
-            return m;
-          }).toList();
-          await supabase.from('subtasks').insert(baseRows);
-        }
-      }
-
-      if (_dueDate != null) {
-        final title = _titleCtrl.text.trim();
-        NotificationService().cancelTaskNotification(taskId);
-        NotificationService().scheduleTaskNotification(taskId, title, _dueDate!);
-      } else {
-        NotificationService().cancelTaskNotification(taskId);
-      }
+      await TaskDetailPersistence.saveTask(
+        isNew: _isNew,
+        existingTaskId: widget.task?.id,
+        title: _titleCtrl.text,
+        description: _descCtrl.text,
+        priority: _priority,
+        projectId: _project?.id,
+        sectionId: _sectionId,
+        dueDate: _dueDate,
+        dueTime: _dueTime,
+        recurrence: _recurrence,
+        labelIds: _labelIds,
+        subtasks: _subtasks,
+      );
 
       if (mounted) {
         _popping = true;
@@ -1671,41 +1469,10 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
           ),
         ),
 
-        // ── Notas ────────────────────────────────────────────────────────
-        Padding(
+        TaskDetailDescriptionField(
+          controller: _descCtrl,
+          focusNode: _descFocusNode,
           padding: const EdgeInsets.fromLTRB(52, 4, 20, 14),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _descFocused
-                    ? AppColors.accent.withValues(alpha: 0.5)
-                    : AppColors.textTertiary.withValues(alpha: 0.12),
-                width: 1,
-              ),
-            ),
-            child: TextField(
-              controller: _descCtrl,
-              focusNode: _descFocusNode,
-              cursorColor: AppColors.accent,
-              cursorWidth: 1.5,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.55),
-              decoration: InputDecoration(
-                hintText: 'Adicionar notas...',
-                hintStyle: TextStyle(color: AppColors.textTertiary.withValues(alpha: 0.55), fontSize: 14),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-                filled: true,
-                fillColor: Colors.transparent,
-              ),
-              maxLines: null,
-            ),
-          ),
         ),
 
         // ── Card de metadados ────────────────────────────────────────────
@@ -2026,79 +1793,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
         // COMMENT-LOAD: lista de comentários existentes, dentro da área
         // rolável (o campo de input em _buildFooter é fixo e fora do scroll;
         // colocar a lista lá causaria overflow com muitos comentários).
-        if (_loadingComments)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Center(child: CupertinoActivityIndicator()),
-          )
-        else if (_comments.isNotEmpty)
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _comments.length,
-            itemBuilder: (_, i) {
-              final c = _comments[i];
-              final texto = c['conteudo'] as String? ?? '';
-              final createdAt = c['created_at'] != null
-                  ? DateTime.tryParse(c['created_at'] as String)
-                  : null;
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: HugeIcon(icon: HugeIcons.strokeRoundedUser,
-                          size: 16, color: AppColors.accent),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppColors.textTertiary.withValues(alpha: 0.12),
-                              ),
-                            ),
-                            child: Text(
-                              texto,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textPrimary,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                          if (createdAt != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4, left: 4),
-                              child: Text(
-                                _formatCommentDate(createdAt),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textTertiary,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+        TaskDetailCommentsList(loading: _loadingComments, comments: _comments),
 
         const SizedBox(height: 24),
       ],
@@ -2110,82 +1805,17 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   Widget _buildFooter({double keyboardHeight = 0}) {
     if (_isNew) return const SizedBox.shrink();
     final bottomPad = keyboardHeight > 0 ? 8.0 : _viewPaddingBottom + 8.0;
-    final borderTop = Border(
-        top: BorderSide(
-            color: AppColors.surfaceVariant.withValues(alpha: 0.6),
-            width: 0.5));
-    final hasComment = _commentCtrl.text.trim().isNotEmpty;
-
-    return Container(
-      decoration: BoxDecoration(color: AppColors.surface, border: borderTop),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(12, 6, 12, bottomPad),
-        child: Container(
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceVariant.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-                color: AppColors.textTertiary.withValues(alpha: 0.15)),
-          ),
-          child: Row(
-            children: [
-              const SizedBox(width: 14),
-              HugeIcon(icon: HugeIcons.strokeRoundedAttachment01,
-                  size: 17, color: AppColors.textTertiary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: _commentCtrl,
-                  style: TextStyle(
-                      fontSize: 14, color: AppColors.textPrimary),
-                  cursorColor: AppColors.accent,
-                  cursorWidth: 1.5,
-                  maxLines: 1,
-                  decoration: InputDecoration(
-                    hintText: 'Comentário...',
-                    hintStyle: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textTertiary.withValues(alpha: 0.6)),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              // Send button — activates when there's text
-              // GESTURE-OLD: GestureDetector sem feedback visual
-              Pressable(
-                onTap: hasComment ? _sendComment : null,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 32,
-                  height: 32,
-                  margin: const EdgeInsets.only(right: 6),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: hasComment
-                        ? AppColors.accent
-                        : AppColors.textTertiary.withValues(alpha: 0.2),
-                  ),
-                  child: HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01,
-                    size: 16,
-                    color: hasComment
-                        ? AppColors.background
-                        : AppColors.textTertiary.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return TaskDetailCommentFooter(
+      commentCtrl: _commentCtrl,
+      bottomPad: bottomPad,
+      onSend: _sendComment,
     );
   }
+
+  // PERF-TITLE-OLD: _titleCtrl.addListener(() => setState(() {})) rebuildava
+  // o sheet inteiro (~3300 linhas) a cada tecla no título. Removido — nenhum
+  // widget mobile depende do texto do título para rebuild. Comentário usa
+  // ValueListenableBuilder local no botão enviar (acima).
 
   // ── Priority popover (anchored to chip, Todoist-style) ─────────────────────
 
@@ -2832,38 +2462,24 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_subtasks.isNotEmpty)
-          ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            padding: const EdgeInsets.only(top: 4),
-            itemCount: _subtasks.length,
-            onReorderItem: (oldIndex, newIndex) {
-              setState(() {
-                final item = _subtasks.removeAt(oldIndex);
-                _subtasks.insert(newIndex, item);
-                for (int i = 0; i < _subtasks.length; i++) {
-                  _subtasks[i].order = i;
-                }
-              });
-            },
-            itemBuilder: (context, i) {
-              final s = _subtasks[i];
-              return SubtaskEditorRow(
-                key: ValueKey(s.uid),
-                item: s,
-                index: i,
-                labels: _labels.map((l) => LabelOption(l.id, l.name, l.color)).toList(),
-                onToggle: () => _toggleSubtaskDone(s),
-                onRemove: () {
-                  s.dispose();
-                  setState(() => _subtasks.removeAt(i));
-                },
-                onChanged: () => setState(() {}),
-              );
-            },
-          ),
+        TaskDetailSubtasksList(
+          subtasks: _subtasks,
+          labels: _labels.map((l) => LabelOption(l.id, l.name, l.color)).toList(),
+          onToggle: _toggleSubtaskDone,
+          onReorder: (oldIndex, newIndex) {
+            setState(() {
+              final item = _subtasks.removeAt(oldIndex);
+              _subtasks.insert(newIndex, item);
+              for (var i = 0; i < _subtasks.length; i++) {
+                _subtasks[i].order = i;
+              }
+            });
+          },
+          onRemove: (i) {
+            _subtasks[i].dispose();
+            setState(() => _subtasks.removeAt(i));
+          },
+        ),
         // Botão de adição
         // GESTURE-OLD: GestureDetector sem feedback visual
         Pressable(

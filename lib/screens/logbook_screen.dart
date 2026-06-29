@@ -113,12 +113,15 @@ class _LogbookScreenState extends State<LogbookScreen> {
                             (ctx, i) {
                               final task = groups[key]![i];
                               final globalIndex = _tasks.indexOf(task);
-                              return _AnimatedLogbookTile(
-                                index: globalIndex,
-                                child: TaskTile(
-                                  task: task,
-                                  onSubtaskToggled: (_) {},
-                                  onTap: () => showTaskDetailSheet(ctx, task, onSaved: _load),
+                              return RepaintBoundary(
+                                key: ValueKey('rb_logbook_${task.id}'),
+                                child: _AnimatedLogbookTile(
+                                  index: globalIndex,
+                                  child: TaskTile(
+                                    task: task,
+                                    onSubtaskToggled: (_) {},
+                                    onTap: () => showTaskDetailSheet(ctx, task, onSaved: _load),
+                                  ),
                                 ),
                               );
                             },

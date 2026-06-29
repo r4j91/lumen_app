@@ -345,8 +345,8 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
     final today = DateTime(now.year, now.month, now.day);
     final due = DateTime(_dueDate!.year, _dueDate!.month, _dueDate!.day);
     final diff = due.difference(today).inDays;
-    if (diff == 0) return const Color(0xFF7ECC49);
-    if (diff < 0) return const Color(0xFFDC4C3E);
+    if (diff == 0) return AppColors.dateDueToday;
+    if (diff < 0) return AppColors.dateOverdue;
     return AppColors.textPrimary;
   }
 

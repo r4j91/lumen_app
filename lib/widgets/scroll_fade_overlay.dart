@@ -1,60 +1,61 @@
 // SCROLL-FADE-V1
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_layout.dart';
 
-/// Aplica um gradiente de fade na borda inferior de um widget scrollável,
-/// simulando o efeito do Todoist onde o conteúdo dissolve antes da navbar.
+/// Scrim gradient on the bottom edge of scrollable content so items dissolving
+/// under the floating nav pill + FAB stay legible and don't bleed through
+/// the glass navbar.
 ///
-/// Uso:
-///   ScrollFadeOverlay(
-///     fadeHeight: 80,
-///     child: ListView(...),
-///   )
-///
-/// Sem efeito em desktop (breakpoint >= 1024, igual ResponsiveLayout) —
-/// lá não há navbar flutuante por baixo da qual o conteúdo precise dissolver.
+/// Uses an opaque background overlay (not alpha-mask on content) for a
+/// stronger hide than [ShaderMask] alone.
 class ScrollFadeOverlay extends StatelessWidget {
   const ScrollFadeOverlay({
     super.key,
     required this.child,
-    this.fadeHeight = 150.0,
+    this.fadeHeight,
   });
 
   final Widget child;
 
-  /// Altura em pixels do gradiente de fade na borda inferior.
-  /// Deve ser próximo à altura da navbar + safe area.
-  final double fadeHeight;
+  /// Height of the bottom scrim. Defaults to nav chrome + extra buffer.
+  final double? fadeHeight;
 
   @override
   Widget build(BuildContext context) {
     if (MediaQuery.of(context).size.width >= 1024) return child;
 
     final bg = AppColors.background;
+    final height = fadeHeight ?? AppLayout.totalBottomChromeHeight(context) + 28;
 
-    return ShaderMask(
-      shaderCallback: (Rect bounds) {
-        final fadeStart = 1.0 - (fadeHeight / bounds.height).clamp(0.0, 0.55);
-        final fadeMid = 1.0 - (fadeHeight / bounds.height * 0.35).clamp(0.0, 0.25);
-        return LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            bg,
-            bg,
-            bg.withValues(alpha: 0.55),
-            bg.withValues(alpha: 0),
-          ],
-          stops: [
-            0.0,
-            fadeStart,
-            fadeMid,
-            1.0,
-          ],
-        ).createShader(bounds);
-      },
-      blendMode: BlendMode.dstIn,
-      child: child,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: height,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    bg.withValues(alpha: 0),
+                    bg.withValues(alpha: 0.82),
+                    bg.withValues(alpha: 0.96),
+                    bg,
+                  ],
+                  stops: const [0.0, 0.38, 0.72, 1.0],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

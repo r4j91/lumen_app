@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -53,7 +55,7 @@ Future<void> _bootstrap() async {
       publishableKey:
           'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdicG9lbnZvZ3JjcWhjcWZqbGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjg1NTEsImV4cCI6MjA5NzEwNDU1MX0.xLTHtA1e1ia3s-2kwezcwIAD170b7Bc0L1fCTeNJNXM',
       authOptions: const FlutterAuthClientOptions(
-        authFlowType: AuthFlowType.implicit,
+        authFlowType: AuthFlowType.pkce,
         autoRefreshToken: true,
       ),
     );
@@ -92,6 +94,45 @@ class _AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<_AuthGate> {
   final _auth = AuthService();
+  StreamSubscription<AuthState>? _authSub;
+  DateTime? _lastTokenRefresh;
+  int _rapidRefreshCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_supabaseReady) _listenAuthRecovery();
+  }
+
+  /// Detecta rajada de refresh (ex.: 5 abas disparando queries em paralelo)
+  /// e faz signOut para evitar loop que derruba o app no device.
+  void _listenAuthRecovery() {
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.tokenRefreshed) {
+        final now = DateTime.now();
+        if (_lastTokenRefresh != null &&
+            now.difference(_lastTokenRefresh!) < const Duration(seconds: 2)) {
+          _rapidRefreshCount++;
+          if (_rapidRefreshCount >= 5) {
+            _rapidRefreshCount = 0;
+            debugPrint('Auth: refresh storm detected, signing out');
+            unawaited(Supabase.instance.client.auth.signOut());
+          }
+        } else {
+          _rapidRefreshCount = 0;
+        }
+        _lastTokenRefresh = now;
+      } else if (data.event == AuthChangeEvent.signedOut) {
+        _rapidRefreshCount = 0;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,9 +186,21 @@ class _RootScreenState extends State<RootScreen> {
   final _todayKey = GlobalKey<TodayScreenState>();
   final _inboxKey = GlobalKey<InboxScreenState>();
 
-  // Created once — never rebuilt. Preserves scroll, loaded data and UI state
-  // across tab switches.
-  late final List<Widget> _screens;
+  // Lazy — monta aba só na primeira visita; evita rajada de queries no boot.
+  final List<Widget?> _screens = List<Widget?>.filled(5, null);
+
+  Widget _lazyScreen(int i) {
+    if (_screens[i] != null) return _screens[i]!;
+    _screens[i] = switch (i) {
+      0 => HomeScreen(key: _homeKey, onNavigateToTab: _onTabSelected),
+      1 => InboxScreen(key: _inboxKey),
+      2 => TodayScreen(key: _todayKey),
+      3 => const UpcomingScreen(),
+      4 => const FiltersScreen(),
+      _ => const SizedBox.shrink(),
+    };
+    return _screens[i]!;
+  }
 
   void _onThemeChanged() {
     if (mounted) setState(() {});
@@ -157,14 +210,7 @@ class _RootScreenState extends State<RootScreen> {
   void initState() {
     super.initState();
     ThemeProvider.instance.addListener(_onThemeChanged);
-    _screens = [
-      // HOME-V2-OLD: const BrowseScreen(),
-      HomeScreen(key: _homeKey, onNavigateToTab: _onTabSelected),
-      InboxScreen(key: _inboxKey),
-      TodayScreen(key: _todayKey),
-      const UpcomingScreen(),
-      const FiltersScreen(),
-    ];
+    _lazyScreen(0);
   }
 
   @override
@@ -184,6 +230,7 @@ class _RootScreenState extends State<RootScreen> {
     // HOME-REFRESH: voltando pra tab Home a partir de outra — recarrega
     // tarefas/projetos (mesma necessidade de Inbox/Today ao reentrar,
     // sem RouteObserver: troca de tab não passa pelo Navigator).
+    _lazyScreen(i);
     if (i == 0) _homeKey.currentState?.reload();
     setState(() => _index = i);
   }
@@ -203,7 +250,10 @@ class _RootScreenState extends State<RootScreen> {
       onDestinationSelected: _onTabSelected,
       body: IndexedStack(
         index: _index,
-        children: _screens,
+        children: List.generate(
+          5,
+          (i) => _screens[i] ?? const SizedBox.shrink(),
+        ),
       ),
       onTaskCreated: _onTaskCreated,
       onProjectCreated: _onProjectCreated,

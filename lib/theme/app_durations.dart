@@ -8,6 +8,7 @@ class AppDurations {
   static const Duration normal = Duration(milliseconds: 180);
   static const Duration medium = Duration(milliseconds: 240);
   static const Duration slow   = Duration(milliseconds: 320);
+  static const Duration popover = Duration(milliseconds: 150);
 }
 
 class AppCurves {

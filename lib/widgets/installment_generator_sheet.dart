@@ -4,6 +4,7 @@ import '../services/subtask_repository.dart';
 import '../theme/app_colors.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'pressable.dart';
+import 'task_detail/sheets/task_date_picker_sheet.dart';
 
 /// Abre o gerador de parcelas (N subtarefas com vencimentos calculados
 /// automaticamente) para a tarefa [taskId].
@@ -95,13 +96,26 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
   // ── Ações ──────────────────────────────────────────────────────────────────
 
   Future<void> _pickFirstDueDate() async {
-    final picked = await showDatePicker(
+    DatePickerResult? lastResult;
+    await showModalBottomSheet<void>(
       context: context,
-      initialDate: _firstDueDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => TaskDatePickerSheet(
+        initialDate: _firstDueDate,
+        onChanged: (r) {
+          lastResult = r;
+          if (r.date != null && mounted) {
+            setState(() => _firstDueDate = r.date!);
+          }
+        },
+      ),
     );
-    if (picked != null && mounted) setState(() => _firstDueDate = picked);
+    if (!mounted) return;
+    final date = lastResult?.date;
+    if (date != null) setState(() => _firstDueDate = date);
   }
 
   Future<void> _generate() async {
@@ -152,10 +166,12 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
             color: const Color.fromRGBO(22, 22, 26, 0.98),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom +
+                View.of(context).padding.bottom /
+                    View.of(context).devicePixelRatio,
+          ),
+          child: SingleChildScrollView(
               // CORRIGIDO_PARCELAS_ALTURA: padding top 0 -> 8, para o
               // header (handle + título/subtítulo) não ficar colado/cortado
               // pela borda arredondada superior do Container.
@@ -194,7 +210,6 @@ class _InstallmentGeneratorSheetState extends State<InstallmentGeneratorSheet> {
             ),
           ),
         ),
-      ),
     );
   }
 

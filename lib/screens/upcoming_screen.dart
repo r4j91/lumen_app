@@ -5,6 +5,7 @@ import '../services/haptic_service.dart';
 import '../services/supabase_client.dart';
 import '../services/task_repository.dart';
 import '../services/task_sync.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_sheet.dart';
@@ -44,7 +45,7 @@ class _UpcomingScreenState extends State<UpcomingScreen>
   Map<DateTime, List<Task>> _tasksByDay = {};
   bool _loading = true;
 
-  _CalMode _mode = _CalMode.month;
+  _CalMode _mode = _CalMode.agenda;
   late final AnimationController _modeCtrl;
   late final Animation<double> _calendarHeight;
 
@@ -237,7 +238,7 @@ class _UpcomingScreenState extends State<UpcomingScreen>
       grouped.putIfAbsent(d, () => []).add(t);
     }
     final sortedDays = grouped.keys.toList()..sort();
-    final bottomInset = MediaQuery.of(context).viewPadding.bottom + 90;
+    final bottomInset = AppLayout.bottomListInset(context);
 
     return RefreshIndicator(
       color: AppColors.accent,

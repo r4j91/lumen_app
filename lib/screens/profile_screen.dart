@@ -56,12 +56,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: 8 + MediaQuery.of(ctx).viewPadding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
               if (!kIsWeb)
                 ListTile(
                   leading: HugeIcon(icon: HugeIcons.strokeRoundedCamera01, color: AppColors.accent),
@@ -82,7 +83,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ],
           ),
         ),
-      ),
     );
 
     if (!mounted) return;

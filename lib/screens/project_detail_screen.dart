@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/section.dart';
@@ -13,6 +14,7 @@ import '../services/section_repository.dart';
 import '../services/supabase_client.dart';
 import '../services/task_repository.dart';
 import '../services/task_sync.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/empty_state.dart';
@@ -20,6 +22,7 @@ import '../widgets/swipeable_task_tile.dart';
 import '../widgets/task_detail/subtask_item.dart';
 import '../widgets/task_detail/sheets/subtask_detail_sheet.dart';
 import '../widgets/task_detail/sheets/task_labels_picker_sheet.dart' show LabelOption;
+import '../widgets/project_detail/project_list_models.dart';
 import '../widgets/task_tile.dart';
 import 'quick_add_task_sheet.dart';
 import 'task_detail_sheet.dart';
@@ -330,25 +333,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }
 
   void _showOptionsMenu(BuildContext ctx) {
-    // SUBSTITUIDO_ETAPA2: RelativeRect recalculado com base no overlay para
-    // ancorar o menu logo abaixo da pílula, em vez de deslocado para baixo.
-    // final renderBox = ctx.findRenderObject() as RenderBox;
-    // final offset = renderBox.localToGlobal(Offset.zero);
-    // final size = renderBox.size;
-    // SUBSTITUIDO_ETAPA2 (correção 2): RelativeRect.fromRect trocado por
-    // fromLTRB com offset vertical, forçando abertura abaixo da pílula.
-    // final RenderBox button = ctx.findRenderObject() as RenderBox;
-    // final RenderBox overlay = Navigator.of(ctx).overlay!.context.findRenderObject() as RenderBox;
-    // final RelativeRect position = RelativeRect.fromRect(
-    //   Rect.fromPoints(
-    //     button.localToGlobal(Offset.zero, ancestor: overlay),
-    //     button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
-    //   ),
-    //   Offset.zero & overlay.size,
-    // );
     final RenderBox button = ctx.findRenderObject() as RenderBox;
-    final RenderBox overlay = Navigator.of(ctx).overlay!.context.findRenderObject() as RenderBox;
-    final Offset buttonTopLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final RenderBox overlay =
+        Navigator.of(ctx).overlay!.context.findRenderObject() as RenderBox;
+    final Offset buttonTopLeft =
+        button.localToGlobal(Offset.zero, ancestor: overlay);
     final Offset buttonBottomRight = button.localToGlobal(
       button.size.bottomRight(Offset.zero),
       ancestor: overlay,
@@ -364,14 +353,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       color: AppColors.surfaceVariant,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       position: position,
-      // position: RelativeRect.fromLTRB(
-      //   offset.dx + size.width - 180,
-      //   offset.dy + size.height + 4,
-      //   16,
-      //   0,
-      // ),
       items: [
-        // M4: seção Display (Balões/Lista) adicionada no topo do menu.
         PopupMenuItem<String>(
           enabled: false,
           padding: EdgeInsets.zero,
@@ -385,7 +367,6 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             child: Row(
               children: [
                 Expanded(
-                  // GESTURE-OLD: GestureDetector sem feedback visual
                   child: Pressable(
                     onTap: () {
                       Navigator.of(ctx).pop();
@@ -402,26 +383,35 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedGrid, size: 18,
-                              color: _displayMode == 'cards'
-                                  ? AppColors.accent
-                                  : AppColors.textTertiary),
-                          const SizedBox(height: 3),
-                          Text('Balões', style: TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.w500,
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedGrid,
+                            size: 18,
                             color: _displayMode == 'cards'
                                 ? AppColors.accent
                                 : AppColors.textTertiary,
-                          )),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Balões',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: _displayMode == 'cards'
+                                  ? AppColors.accent
+                                  : AppColors.textTertiary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                Container(width: 1, height: 36,
-                    color: AppColors.textTertiary.withValues(alpha: 0.15)),
+                Container(
+                  width: 1,
+                  height: 36,
+                  color: AppColors.textTertiary.withValues(alpha: 0.15),
+                ),
                 Expanded(
-                  // GESTURE-OLD: GestureDetector sem feedback visual
                   child: Pressable(
                     onTap: () {
                       Navigator.of(ctx).pop();
@@ -438,17 +428,24 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedListView, size: 18,
-                              color: _displayMode == 'list'
-                                  ? AppColors.accent
-                                  : AppColors.textTertiary),
-                          const SizedBox(height: 3),
-                          Text('Lista', style: TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.w500,
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedListView,
+                            size: 18,
                             color: _displayMode == 'list'
                                 ? AppColors.accent
                                 : AppColors.textTertiary,
-                          )),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Lista',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: _displayMode == 'list'
+                                  ? AppColors.accent
+                                  : AppColors.textTertiary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -477,12 +474,15 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             ],
           ),
         ),
-        // SUBSTITUIDO_ETAPA2: nova opção "Nova Seção" adicionada ao menu.
         PopupMenuItem<String>(
           value: 'add_section',
           child: Row(
             children: [
-              HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 18, color: Theme.of(context).colorScheme.onSurface),
+              HugeIcon(
+                icon: HugeIcons.strokeRoundedAdd01,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               const SizedBox(width: 10),
               const Text('Nova Seção'),
             ],
@@ -491,7 +491,6 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       ],
     ).then((value) {
       if (value == 'toggle_completed') _setShowCompleted(!_showCompleted);
-      // SUBSTITUIDO_ETAPA2: trata a nova opção do menu.
       if (value == 'add_section') _createSection();
     });
   }
@@ -582,23 +581,22 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }
 
   Future<void> _confirmDeleteSection(Section section) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCupertinoDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceVariant,
-        title: Text('Excluir seção?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Excluir seção?'),
         content: Text(
           'As tarefas de "${section.name}" não serão excluídas, apenas ficarão sem seção.',
-          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancelar', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Cancelar'),
           ),
-          TextButton(
+          CupertinoDialogAction(
+            isDestructiveAction: true,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Excluir', style: TextStyle(color: AppColors.priorityHigh, fontWeight: FontWeight.w700)),
+            child: const Text('Excluir'),
           ),
         ],
       ),
@@ -616,31 +614,29 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     }
   }
 
-  void _showSectionMenu(BuildContext ctx, Section section) {
-    final renderBox = ctx.findRenderObject() as RenderBox;
-    final offset = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
-    showMenu<String>(
+  Future<void> _showSectionMenu(BuildContext ctx, Section section) async {
+    final value = await showCupertinoModalPopup<String>(
       context: ctx,
-      color: AppColors.surfaceVariant,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      position: RelativeRect.fromLTRB(
-        offset.dx + size.width,
-        offset.dy + size.height,
-        16,
-        0,
-      ),
-      items: [
-        const PopupMenuItem(value: 'rename', child: Text('Renomear')),
-        PopupMenuItem(
-          value: 'delete',
-          child: Text('Excluir', style: TextStyle(color: AppColors.priorityHigh)),
+      builder: (sheetCtx) => CupertinoActionSheet(
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(sheetCtx).pop('rename'),
+            child: const Text('Renomear'),
+          ),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.of(sheetCtx).pop('delete'),
+            child: const Text('Excluir'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(sheetCtx).pop(),
+          child: const Text('Cancelar'),
         ),
-      ],
-    ).then((value) {
-      if (value == 'rename') _renameSection(section);
-      if (value == 'delete') _confirmDeleteSection(section);
-    });
+      ),
+    );
+    if (value == 'rename') _renameSection(section);
+    if (value == 'delete') _confirmDeleteSection(section);
   }
 
   // ── Build ────────────────────────────────────────────────────────────────────
@@ -1126,82 +1122,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         // color: Colors.white.withValues(alpha: 0.10),
       );
 
-  List<Widget> _buildSectionedRows() {
-    final rows = <Widget>[];
-
-    final grouped = <String?, List<int>>{};
-    for (var i = 0; i < _tasks.length; i++) {
-      grouped.putIfAbsent(_tasks[i].sectionId, () => []).add(i);
-    }
-
-    // Tasks without section — no header, sits at the top.
-    final nullIndices = grouped[null] ?? [];
-    for (var n = 0; n < nullIndices.length; n++) {
-      rows.add(_buildTaskRow(nullIndices[n]));
-      if (n < nullIndices.length - 1) rows.add(_buildSeparator());
-    }
-
-    final sorted = [..._sections]..sort((a, b) => a.order.compareTo(b.order));
-    for (final section in sorted) {
-      final expanded = !_collapsedSectionIds.contains(section.id);
-      final indices = grouped[section.id] ?? [];
-      rows.add(_SectionHeader(
-        name: section.name,
-        count: indices.length,
-        expanded: expanded,
-        onTap: () => setState(() {
-          if (expanded) {
-            _collapsedSectionIds.add(section.id);
-          } else {
-            _collapsedSectionIds.remove(section.id);
-          }
-        }),
-        onMenu: (ctx) => _showSectionMenu(ctx, section),
-      ));
-      rows.add(AnimatedSize(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        alignment: Alignment.topCenter,
-        child: !expanded
-            ? const SizedBox(width: double.infinity)
-            : Column(
-                children: [
-                  for (var n = 0; n < indices.length; n++) ...[
-                    _buildTaskRow(indices[n]),
-                    _buildSeparator(),
-                  ],
-                  _buildAddTaskRow(section.id),
-                ],
-              ),
-      ));
-    }
-
-    // REMOVIDO_ETAPA1: botão visual "+ Nova Seção" ocultado (limpeza visual
-    // do ProjectDetailScreen). Lógica de criação preservada em _createSection,
-    // ainda chamável por código (ex: a partir do menu de opções da tela).
-    // rows.add(InkWell(
-    //   onTap: _createSection,
-    //   child: Opacity(
-    //     opacity: 0.5,
-    //     child: Padding(
-    //       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-    //       child: Row(
-    //         children: [
-    //           HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 16, color: AppColors.textSecondary),
-    //           const SizedBox(width: 8),
-    //           Text('Nova Seção', style: TextStyle(fontSize: 13.5, color: AppColors.textSecondary)),
-    //         ],
-    //       ),
-    //     ),
-    //   ),
-    // ));
-
-    return rows;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).padding.bottom + 90;
+    final bottomInset = AppLayout.bottomListInset(context);
     final isEmpty = _tasks.isEmpty && _completedTasks.isEmpty && _sections.isEmpty;
 
     return Scaffold(
@@ -1371,40 +1294,76 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   //           RepaintBoundary(...),
   //     ],
   //   ),
-  Widget _buildTaskListView(double bottomInset) {
-    final rows = <Widget>[
-      ..._buildSectionedRows(),
-      if (_showCompleted && _completedTasks.isNotEmpty)
-        CompletedSectionHeader(
+  List<ProjectListItem> _computeListItems() {
+    return computeProjectListItems(
+      tasks: _tasks,
+      sections: _sections,
+      collapsedSectionIds: _collapsedSectionIds,
+      showCompleted: _showCompleted,
+      completedExpanded: _completedExpanded,
+      completedTasks: _completedTasks,
+    );
+  }
+
+  Widget _buildListItem(ProjectListItem item) {
+    switch (item.kind) {
+      case ProjectListItemKind.task:
+        return _buildTaskRow(item.taskIndex!);
+      case ProjectListItemKind.separator:
+        return _buildSeparator();
+      case ProjectListItemKind.sectionHeader:
+        final section = item.section!;
+        final expanded = !_collapsedSectionIds.contains(section.id);
+        final count = _tasks.where((t) => t.sectionId == section.id).length;
+        return ProjectSectionHeader(
+          name: section.name,
+          count: count,
+          expanded: expanded,
+          onTap: () => setState(() {
+            if (expanded) {
+              _collapsedSectionIds.add(section.id);
+            } else {
+              _collapsedSectionIds.remove(section.id);
+            }
+          }),
+          onMenu: (ctx) => _showSectionMenu(ctx, section),
+        );
+      case ProjectListItemKind.addTask:
+        return _buildAddTaskRow(item.sectionId);
+      case ProjectListItemKind.completedHeader:
+        return CompletedSectionHeader(
           count: _completedTasks.length,
           expanded: _completedExpanded,
           onTap: () {
             HapticService().selectionClick();
             setState(() => _completedExpanded = !_completedExpanded);
           },
-        ),
-      if (_showCompleted && _completedExpanded)
-        for (var ci = 0; ci < _completedTasks.length; ci++)
-          RepaintBoundary(
-            key: ValueKey('rb_done_${_completedTasks[ci].id}'),
-            child: SwipeableTaskTile(
+        );
+      case ProjectListItemKind.completedTask:
+        final ci = item.completedIndex!;
+        return RepaintBoundary(
+          key: ValueKey('rb_done_${_completedTasks[ci].id}'),
+          child: SwipeableTaskTile(
+            task: _completedTasks[ci],
+            onDeleteRequested: () => _deleteCompletedTask(ci),
+            onEdit: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),
+            onRefresh: _loadTasks,
+            child: TaskTile(
               task: _completedTasks[ci],
-              onDeleteRequested: () => _deleteCompletedTask(ci),
-              onEdit: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),
-              onRefresh: _loadTasks,
-              child: TaskTile(
-                task: _completedTasks[ci],
-                showProject: false,
-                // CORRIGIDO_ETAPA3B
-                allLabels: _allLabels,
-                onSubtaskChanged: _loadTasks,
-                onSubtaskToggled: (_) {},
-                onCompleted: () => _toggleUndone(ci),
-                onTap: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),
-              ),
+              showProject: false,
+              allLabels: _allLabels,
+              onSubtaskChanged: _loadTasks,
+              onSubtaskToggled: (_) {},
+              onCompleted: () => _toggleUndone(ci),
+              onTap: () => showTaskDetailSheet(context, _completedTasks[ci], onSaved: _loadTasks),
             ),
           ),
-    ];
+        );
+    }
+  }
+
+  Widget _buildTaskListView(double bottomInset) {
+    final items = _computeListItems();
 
     return ScrollFadeOverlay(child: CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -1413,70 +1372,12 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           padding: EdgeInsets.fromLTRB(0, 12, 0, bottomInset),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) => rows[index],
-              childCount: rows.length,
+              (context, index) => _buildListItem(items[index]),
+              childCount: items.length,
             ),
           ),
         ),
       ],
     ));
-  }
-}
-
-/// Header row for a project section — chevron + name + count + "···" menu.
-class _SectionHeader extends StatelessWidget {
-  final String name;
-  final int count;
-  final bool expanded;
-  final VoidCallback onTap;
-  final void Function(BuildContext ctx) onMenu;
-
-  const _SectionHeader({
-    required this.name,
-    required this.count,
-    required this.expanded,
-    required this.onTap,
-    required this.onMenu,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      // SUBSTITUIDO_ETAPA2: remove o flash cinza de ripple/highlight ao tocar
-      // no cabeçalho da seção; comportamento de expandir/recolher inalterado.
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: Row(
-          children: [
-            AnimatedRotation(
-              turns: expanded ? 0.25 : 0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              child: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                name,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text('$count', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
-            Builder(
-              builder: (ctx) => IconButton(
-                icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, size: 18, color: AppColors.textTertiary),
-                onPressed: () => onMenu(ctx),
-                visualDensity: VisualDensity.compact,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

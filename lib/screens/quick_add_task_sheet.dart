@@ -102,6 +102,7 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
   Priority?  _priority;
   DateTime?  _dueDate;
   TimeOfDay? _dueTime;
+  DatePickerResult? _lastDateResult;
   _QProject? _project;
   final Set<String> _labelIds = {};
 
@@ -337,7 +338,8 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
   // ── Menu handlers ─────────────────────────────────────────────────────────────
 
   Future<void> _showDateSheet(BuildContext ctx) async {
-    final result = await showModalBottomSheet<DatePickerResult>(
+    _lastDateResult = null;
+    await showModalBottomSheet<void>(
       context: ctx,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -348,25 +350,25 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
         initialDate: _dueDate,
         initialTime: _dueTime,
         initialRecurrence: null,
-        // BUG-DATE-OLD: dependia só do retorno de Navigator.pop() ao
-        // fechar o sheet — tap fora (barrier dismiss) fecha com pop() sem
-        // argumento (null), descartando a seleção já feita dentro do
-        // picker. onChanged atualiza o estado local no momento da seleção,
-        // antes de qualquer fechamento.
         onChanged: (r) {
-          if (!mounted) return;
-          setState(() {
-            _dueDate = r.date;
-            _dueTime = r.time;
-          });
+          _lastDateResult = r;
+          if (mounted) {
+            setState(() {
+              _dueDate = r.date;
+              _dueTime = r.time;
+            });
+          }
         },
       ),
     );
-    if (result == null || !mounted) return;
-    setState(() {
-      _dueDate = result.date;
-      _dueTime = result.time;
-    });
+    if (!mounted) return;
+    final effective = _lastDateResult;
+    if (effective != null) {
+      setState(() {
+        _dueDate = effective.date;
+        _dueTime = effective.time;
+      });
+    }
   }
 
   Future<void> _showPriorityMenu(BuildContext ctx) async {

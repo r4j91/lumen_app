@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 import '../models/subtask.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import '../widgets/anchored_select_menu.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/skeleton_loader.dart';
@@ -45,6 +47,7 @@ class TodayScreenState extends State<TodayScreen> {
   bool _loading = true;
   String? _error;
   late final ScrollController _scrollCtrl;
+  final _optionsKey = GlobalKey();
 
   // SharedPreferences-backed preferences
   bool _showCompleted = true;   // section visible (toggle from menu)
@@ -294,47 +297,24 @@ class TodayScreenState extends State<TodayScreen> {
     }).catchError((_) {});
   }
 
-  void _showOptionsMenu(BuildContext context) {
-    final renderBox = context.findRenderObject() as RenderBox;
-    final offset = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
-
-    showMenu<String>(
+  Future<void> _showOptionsMenu() async {
+    final result = await showAnchoredSelectMenu(
       context: context,
-      color: AppColors.surfaceVariant,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      position: RelativeRect.fromLTRB(
-        offset.dx + size.width - 180,
-        offset.dy + size.height + 4,
-        16,
-        0,
-      ),
+      anchorKey: _optionsKey,
       items: [
-        PopupMenuItem(
-          value: 'toggle_completed',
-          child: Row(
-            children: [
-              HugeIcon(
-                icon: _showCompleted
-                    ? HugeIcons.strokeRoundedViewOff
-                    : HugeIcons.strokeRoundedView,
-                size: 17,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                _showCompleted ? 'Ocultar concluídas' : 'Mostrar concluídas',
-                style: TextStyle(fontSize: 13.5, color: AppColors.textPrimary),
-              ),
-            ],
-          ),
+        AnchoredMenuItem(
+          id: 'toggle_completed',
+          label: _showCompleted ? 'Ocultar concluídas' : 'Mostrar concluídas',
+          hugeIcon: _showCompleted
+              ? HugeIcons.strokeRoundedViewOff
+              : HugeIcons.strokeRoundedView,
+          iconColor: AppColors.textSecondary,
         ),
       ],
-    ).then((value) {
-      if (value == 'toggle_completed') {
-        _setShowCompleted(!_showCompleted);
-      }
-    });
+    );
+    if (result == 'toggle_completed') {
+      _setShowCompleted(!_showCompleted);
+    }
   }
 
   @override
@@ -384,7 +364,7 @@ class TodayScreenState extends State<TodayScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final dateLabel = _formatDate(now);
-    final bottomInset = MediaQuery.of(context).padding.bottom + 88;
+    final bottomInset = AppLayout.bottomListInset(context);
 
     // Split into overdue (before today) and today.
     // Precompute index map to avoid O(n) indexOf inside the SliverList builder.
@@ -428,12 +408,11 @@ class TodayScreenState extends State<TodayScreen> {
                     ],
                   ),
                 ),
-                Builder(
-                  builder: (ctx) => IconButton(
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textSecondary),
-                    onPressed: () => _showOptionsMenu(ctx),
-                    tooltip: 'Opções',
-                  ),
+                IconButton(
+                  key: _optionsKey,
+                  icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textSecondary),
+                  onPressed: _showOptionsMenu,
+                  tooltip: 'Opções',
                 ),
               ],
             ),

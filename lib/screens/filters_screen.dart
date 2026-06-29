@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
-import '../services/supabase_client.dart';
+import '../services/project_repository.dart';
 import '../services/task_repository.dart';
 import '../services/task_sync.dart';
+import '../services/supabase_client.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -46,7 +48,8 @@ class FiltersScreen extends StatefulWidget {
 }
 
 class _FiltersScreenState extends State<FiltersScreen> {
-  final _repo = const TaskRepository();
+  static const _repo = TaskRepository();
+  static const _projectRepo = ProjectRepository();
   // Dashboard stats
   bool _loading = true;
   int _overdueCount = 0;
@@ -100,59 +103,30 @@ class _FiltersScreenState extends State<FiltersScreen> {
       final today = DateTime(now.year, now.month, now.day);
       final todayStr = _dateStr(today);
       final weekStr = _dateStr(today.add(const Duration(days: 7)));
-      final results = await Future.wait([
-        // Overdue: due < today
-        supabase
-            .from('tasks')
-            .select('id')
-            .eq('concluida', false)
-            .lt('data_vencimento', todayStr),
-        // Today: due == today
-        supabase
-            .from('tasks')
-            .select('id')
-            .eq('concluida', false)
-            .eq('data_vencimento', todayStr),
-        // Next 7 days: today < due <= today+7
-        supabase
-            .from('tasks')
-            .select('id')
-            .eq('concluida', false)
-            .gt('data_vencimento', todayStr)
-            .lte('data_vencimento', weekStr),
-        // Completed today
-        supabase
-            .from('tasks')
-            .select('id')
-            .eq('concluida', true)
-            .eq('data_vencimento', todayStr),
-        // Projects with task counts
-        // FILTERS-ICON-OLD: select('id, nome, cor, tasks(concluida)')
-        supabase
-            .from('projects')
-            .select('id, nome, cor, icone, tasks(concluida)')
-            .order('nome'),
-      ]);
 
-      final projects = (results[4] as List).map((r) {
-        final tasks = (r['tasks'] as List?) ?? [];
-        return _ProjectStat(
-          id: r['id'].toString(),
-          name: r['nome'] as String,
-          pending: tasks.where((t) => t['concluida'] == false).length,
-          total: tasks.length,
-          color: _parseProjectColor(r['cor'] as String?),
-          // FILTERS-ICON-V1
-          icone: r['icone'] as String?,
-        );
-      }).toList();
+      final counts = await _repo.fetchFilterDashboardCounts(
+        todayStr: todayStr,
+        weekStr: weekStr,
+      );
+      final projectStats = await _projectRepo.fetchProjectsWithTaskStats();
+
+      final projects = projectStats
+          .map((r) => _ProjectStat(
+                id: r.id,
+                name: r.name,
+                pending: r.pending,
+                total: r.total,
+                color: _parseProjectColor(r.colorHex),
+                icone: r.iconName,
+              ))
+          .toList();
 
       if (mounted) {
         setState(() {
-          _overdueCount = (results[0] as List).length;
-          _todayCount = (results[1] as List).length;
-          _weekCount = (results[2] as List).length;
-          _completedCount = (results[3] as List).length;
+          _overdueCount = counts.overdue;
+          _todayCount = counts.today;
+          _weekCount = counts.week;
+          _completedCount = counts.completedToday;
           _projects = projects;
           _loading = false;
         });
@@ -164,6 +138,14 @@ class _FiltersScreenState extends State<FiltersScreen> {
 
   // ── Load tasks for a filter view ───────────────────────────────────────────
 
+  TaskFilterKind? _filterKindForView(_FilterView view) => switch (view) {
+        _FilterView.overdue => TaskFilterKind.overdue,
+        _FilterView.today => TaskFilterKind.today,
+        _FilterView.week => TaskFilterKind.week,
+        _FilterView.completed => TaskFilterKind.completedToday,
+        _FilterView.dashboard => null,
+      };
+
   Future<void> _loadFilter(_FilterView view) async {
     setState(() {
       _view = view;
@@ -171,48 +153,33 @@ class _FiltersScreenState extends State<FiltersScreen> {
     });
 
     try {
+      final kind = _filterKindForView(view);
+      if (kind == null) {
+        if (mounted) setState(() => _filterLoading = false);
+        return;
+      }
+
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final todayStr = _dateStr(today);
       final weekStr = _dateStr(today.add(const Duration(days: 7)));
 
-      var q = supabase.from('tasks').select(_taskSelect);
+      final tasks = await _repo.fetchFilteredTasks(
+        kind: kind,
+        todayStr: todayStr,
+        weekStr: weekStr,
+      );
 
-      switch (view) {
-        case _FilterView.overdue:
-          q = q.eq('concluida', false).lt('data_vencimento', todayStr);
-        case _FilterView.today:
-          q = q.eq('concluida', false).eq('data_vencimento', todayStr);
-        case _FilterView.week:
-          q = q
-              .eq('concluida', false)
-              .gt('data_vencimento', todayStr)
-              .lte('data_vencimento', weekStr);
-        case _FilterView.completed:
-          q = q.eq('concluida', true).eq('data_vencimento', todayStr);
-        case _FilterView.dashboard:
-          break;
+      if (mounted) {
+        setState(() {
+          _filterTasks = tasks;
+          _filterLoading = false;
+        });
       }
-
-      final rows =
-          await q.order('data_vencimento', ascending: true).order('ordem');
-      final tasks = (rows as List)
-          .map((r) => TaskRepository.mapRow(r as Map<String, dynamic>))
-          .toList();
-
-      if (mounted) setState(() { _filterTasks = tasks; _filterLoading = false; });
     } catch (_) {
       if (mounted) setState(() => _filterLoading = false);
     }
   }
-
-  static const _taskSelect = '''
-    id, titulo, descricao, prioridade, hora, ordem, concluida,
-    data_vencimento, recorrencia,
-    projects ( nome ),
-    subtasks ( titulo, descricao, concluida, ordem, prioridade ),
-    task_labels ( labels ( id, nome, cor ) )
-  ''';
 
   String _dateStr(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -221,10 +188,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
 
   Future<void> _toggleDone(int i) async {
     final t = _filterTasks[i];
-    await supabase
-        .from('tasks')
-        .update({'concluida': !t.done})
-        .eq('id', t.id);
+    await _repo.toggleTaskDoneById(t.id, !t.done);
     _loadFilter(_view);
     _loadStats();
   }
@@ -279,7 +243,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
   // ── Dashboard ──────────────────────────────────────────────────────────────
 
   Widget _buildDashboard() {
-    final bottomInset = MediaQuery.of(context).viewPadding.bottom + 88;
+    final bottomInset = AppLayout.bottomListInset(context);
 
     return ScrollFadeOverlay(child: CustomScrollView(
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -411,7 +375,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
       _FilterView.completed => AppColors.tagGreen,
       _FilterView.dashboard => AppColors.accent,
     };
-    final bottomInset = MediaQuery.of(context).viewPadding.bottom + 88;
+    final bottomInset = AppLayout.bottomListInset(context);
 
     return ScrollFadeOverlay(child: CustomScrollView(
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),

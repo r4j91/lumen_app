@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../services/supabase_client.dart';
 import '../services/task_repository.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_sheet.dart';
@@ -242,7 +243,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             key: ValueKey(_query),
                             groups: groups,
                             query: _query,
-                            bottomPadding: mq.padding.bottom + 90,
+                            bottomPadding: AppLayout.bottomListInset(context),
                             onTap: (task) => showTaskDetailSheet(context, task),
                           ),
           ),
@@ -293,43 +294,71 @@ class _AnimatedResultsState extends State<_AnimatedResults>
 
   @override
   Widget build(BuildContext context) {
-    final items = <Widget>[];
-    var idx = 0;
+    final entries = _buildEntries();
 
-    for (final groupName in ['Hoje', 'Em breve', 'Sem data']) {
-      final tasks = widget.groups[groupName] ?? [];
-      if (tasks.isEmpty) continue;
-      items.add(_GroupHeader(label: groupName));
-      for (final task in tasks) {
-        final delay = (idx * 0.06).clamp(0.0, 0.5);
+    return ListView.builder(
+      padding: EdgeInsets.only(top: AppSpacing.sm, bottom: widget.bottomPadding),
+      itemCount: entries.length,
+      itemBuilder: (context, i) {
+        final entry = entries[i];
+        if (entry is _SearchHeaderEntry) {
+          return _GroupHeader(label: entry.label);
+        }
+        final taskEntry = entry as _SearchTaskEntry;
+        final delay = (taskEntry.animIndex * 0.06).clamp(0.0, 0.5);
         final anim = CurvedAnimation(
           parent: _ctrl,
           curve: Interval(delay, (delay + 0.5).clamp(0.0, 1.0),
               curve: Curves.easeOutCubic),
         );
-        items.add(FadeTransition(
-          opacity: anim,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.12),
-              end: Offset.zero,
-            ).animate(anim),
-            child: _SearchResultTile(
-              task: task,
-              query: widget.query,
-              onTap: () => widget.onTap(task),
+        return RepaintBoundary(
+          key: ValueKey('rb_search_${taskEntry.task.id}'),
+          child: FadeTransition(
+            opacity: anim,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.12),
+                end: Offset.zero,
+              ).animate(anim),
+              child: _SearchResultTile(
+                task: taskEntry.task,
+                query: widget.query,
+                onTap: () => widget.onTap(taskEntry.task),
+              ),
             ),
           ),
-        ));
+        );
+      },
+    );
+  }
+
+  List<_SearchEntry> _buildEntries() {
+    final entries = <_SearchEntry>[];
+    var idx = 0;
+    for (final groupName in ['Hoje', 'Em breve', 'Sem data']) {
+      final tasks = widget.groups[groupName] ?? [];
+      if (tasks.isEmpty) continue;
+      entries.add(_SearchHeaderEntry(groupName));
+      for (final task in tasks) {
+        entries.add(_SearchTaskEntry(task, idx));
         idx++;
       }
     }
-
-    return ListView(
-      padding: EdgeInsets.only(top: AppSpacing.sm, bottom: widget.bottomPadding),
-      children: items,
-    );
+    return entries;
   }
+}
+
+sealed class _SearchEntry {}
+
+class _SearchHeaderEntry extends _SearchEntry {
+  final String label;
+  _SearchHeaderEntry(this.label);
+}
+
+class _SearchTaskEntry extends _SearchEntry {
+  final Task task;
+  final int animIndex;
+  _SearchTaskEntry(this.task, this.animIndex);
 }
 
 // ── Group header ──────────────────────────────────────────────────────────────

@@ -15,10 +15,10 @@ class TaskPriorityPickerSheet extends StatelessWidget {
   });
 
   static final _opts = [
-    (value: Priority.high,   label: 'Prioridade 1', color: const Color(0xFFDC4C3E), hugeIcon: HugeIcons.strokeRoundedFlag01),
-    (value: Priority.medium, label: 'Prioridade 2', color: const Color(0xFFEB8909), hugeIcon: HugeIcons.strokeRoundedFlag01),
-    (value: Priority.low,    label: 'Prioridade 3', color: const Color(0xFF246FE0), hugeIcon: HugeIcons.strokeRoundedFlag01),
-    (value: null as Priority?, label: 'Sem prioridade', color: const Color(0xFF6B6E76), hugeIcon: HugeIcons.strokeRoundedFlag01),
+    (value: Priority.high,   label: 'Prioridade 1', color: AppColors.subtaskPriorityHigh, hugeIcon: HugeIcons.strokeRoundedFlag01),
+    (value: Priority.medium, label: 'Prioridade 2', color: AppColors.subtaskPriorityMedium, hugeIcon: HugeIcons.strokeRoundedFlag01),
+    (value: Priority.low,    label: 'Prioridade 3', color: AppColors.subtaskPriorityLow, hugeIcon: HugeIcons.strokeRoundedFlag01),
+    (value: null as Priority?, label: 'Sem prioridade', color: AppColors.textTertiary, hugeIcon: HugeIcons.strokeRoundedFlag01),
   ];
 
   @override

@@ -27,6 +27,7 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
     tz_data.initializeTimeZones();
+    _configureLocalTimeZone();
 
     const ios = fln.DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -40,6 +41,14 @@ class NotificationService {
     );
     await _migrateNotificationChannel();
     _initialized = true;
+  }
+
+  void _configureLocalTimeZone() {
+    try {
+      tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
+    } catch (_) {
+      tz.setLocalLocation(tz.UTC);
+    }
   }
 
   /// Migra canal Android legado `lumen_tasks` → `stacked_tasks`.

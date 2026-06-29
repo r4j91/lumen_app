@@ -100,6 +100,11 @@ run_sim() {
   exec flutter run -d "$sim_id" "$@"
 }
 
+terminate_iphone_app() {
+  local device_id="$1"
+  xcrun devicectl device process terminate --device "$device_id" com.roarns.stacked 2>/dev/null || true
+}
+
 run_iphone() {
   local release=0 install=0
   local extra_args=()
@@ -123,15 +128,19 @@ run_iphone() {
   local device_id
   device_id="$(resolve_iphone_id)"
 
+  # Evita sessão debug presa / engine duplicado no device físico.
+  terminate_iphone_app "$device_id"
+  sleep 0.5
+
   if [[ "$install" -eq 1 ]]; then
-    exec flutter install --release -d "$device_id" "${extra_args[@]}"
+    exec flutter install --release -d "$device_id" ${extra_args[@]+"${extra_args[@]}"}
   fi
 
   if [[ "$release" -eq 1 ]]; then
-    exec flutter run --release -d "$device_id" "${extra_args[@]}"
+    exec flutter run --release -d "$device_id" ${extra_args[@]+"${extra_args[@]}"}
   fi
 
-  exec flutter run -d "$device_id" "${extra_args[@]}"
+  exec flutter run -d "$device_id" ${extra_args[@]+"${extra_args[@]}"}
 }
 
 case "${1:-}" in
