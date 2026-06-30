@@ -1,0 +1,40 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#F0F0F2"/>
+      <stop offset="55%" stop-color="#E8E8EC"/>
+      <stop offset="100%" stop-color="#DCDCE0"/>
+    </linearGradient>
+    <radialGradient id="surfaceLift" cx="40%" cy="28%" r="72%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="topGlow" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gradFront" x1="18%" y1="0%" x2="82%" y2="100%">
+      <stop offset="0%" stop-color="#3A3A3C"/>
+      <stop offset="100%" stop-color="#2C2C2E"/>
+    </linearGradient>
+    <linearGradient id="gradMid" x1="18%" y1="0%" x2="82%" y2="100%">
+      <stop offset="0%" stop-color="#636366"/>
+      <stop offset="100%" stop-color="#48484A"/>
+    </linearGradient>
+    <linearGradient id="gradBack" x1="18%" y1="0%" x2="82%" y2="100%">
+      <stop offset="0%" stop-color="#8E8E93"/>
+      <stop offset="100%" stop-color="#6C6C70"/>
+    </linearGradient>
+    <filter id="layerShadow" x="-70%" y="-70%" width="240%" height="240%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000000" flood-opacity="0.26"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bgGrad)"/>
+  <rect width="1024" height="1024" fill="url(#surfaceLift)"/>
+
+  <g filter="url(#layerShadow)">
+    <g><polygon points="512.0,452.2 736.5,586.5 512.0,695.0 328.0,577.3" fill="url(#gradBack)"/><path d="M 736.5,586.5 L 736.5,594.5 L 512.0,703.0 L 512.0,695.0 Z" fill="#48484A" opacity="0.88"/></g>
+    <g><polygon points="512.0,369.4 753.0,511.0 512.0,652.7 311.4,511.0" fill="url(#gradMid)"/><path d="M 753.0,511.0 L 753.0,520.0 L 512.0,661.7 L 512.0,652.7 Z" fill="#3A3A3C" opacity="0.92"/></g>
+    <g><polygon points="512.0,286.6 769.6,435.6 512.0,584.6 254.4,435.6" fill="url(#gradFront)"/><path d="M 769.6,435.6 L 769.6,445.6 L 512.0,594.6 L 512.0,584.6 Z" fill="#1C1C1E" opacity="0.95"/></g>
+  </g>
+</svg>

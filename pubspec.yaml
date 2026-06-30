@@ -60,8 +60,7 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3
 
 # ICON-PACK-OLD: image_path: "assets/icon/icon.png" (geração 1), depois
-# "assets/icon/v2_refinado/azul_nevoa_1024.png". Agora grafite_claro é o
-# ícone padrão do app.
+# v3 premium (opção B) — SVG full-bleed, geometria idêntica em todas variantes.
 flutter_launcher_icons:
   android: true
   ios: true
@@ -83,6 +82,7 @@ flutter:
   assets:
     - assets/icon/
     - assets/icon/v2_refinado/
+    - assets/icon/v3/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
