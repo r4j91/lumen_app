@@ -114,23 +114,34 @@ class FieldPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceVariant.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          border: Border.all(color: AppColors.textTertiary.withValues(alpha: 0.15)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            HugeIcon(icon: hugeIcon, size: 15, color: AppColors.textSecondary),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Center(
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(color: AppColors.textTertiary.withValues(alpha: 0.15)),
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                HugeIcon(icon: hugeIcon, size: 15, color: AppColors.textSecondary),
+                const SizedBox(width: 5),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.0,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -156,14 +167,17 @@ class MetaRow extends StatelessWidget {
       mouseCursor: SystemMouseCursors.click,
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        child: Row(
-          children: [
-            HugeIcon(icon: hugeIcon, size: 18, color: AppColors.textTertiary),
-            const SizedBox(width: 12),
-            Expanded(child: child),
-          ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              HugeIcon(icon: hugeIcon, size: 18, color: AppColors.textTertiary),
+              const SizedBox(width: 12),
+              Expanded(child: child),
+            ],
+          ),
         ),
       ),
     );

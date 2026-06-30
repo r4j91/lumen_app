@@ -50,10 +50,56 @@ class TaskDetailPersistence {
     }
   }
 
+  static Future<void> autosaveTitle({
+    required String taskId,
+    required String title,
+  }) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return;
+    try {
+      await supabase.from('tasks').update({'titulo': trimmed}).eq('id', taskId);
+    } catch (e) {
+      // ignore: avoid_print
+      print('[TaskDetailPersistence] autosave titulo falhou: $e');
+    }
+  }
+
+  static Future<void> autosaveDescription({
+    required String taskId,
+    required String description,
+  }) async {
+    try {
+      await supabase.from('tasks').update({
+        'descricao': description.trim().isEmpty ? null : description.trim(),
+      }).eq('id', taskId);
+    } catch (e) {
+      // ignore: avoid_print
+      print('[TaskDetailPersistence] autosave descricao falhou: $e');
+    }
+  }
+
+  static Future<void> autosaveProject({
+    required String taskId,
+    String? projectId,
+    String? sectionId,
+  }) async {
+    try {
+      await supabase.from('tasks').update({
+        'project_id': projectId,
+        'section_id': sectionId,
+      }).eq('id', taskId);
+    } catch (e) {
+      // ignore: avoid_print
+      print('[TaskDetailPersistence] autosave projeto falhou: $e');
+    }
+  }
+
   static Future<void> autosaveDueDate({
     required String taskId,
+    required String title,
     DateTime? dueDate,
     TimeOfDay? dueTime,
+    Recurrence? recurrence,
   }) async {
     String? dueDateStr;
     String? horaStr;
@@ -67,10 +113,23 @@ class TaskDetailPersistence {
       await supabase.from('tasks').update({
         'data_vencimento': dueDateStr,
         'hora': horaStr,
+        'recorrencia': recurrence?.toJsonString(),
       }).eq('id', taskId);
     } catch (e) {
       // ignore: avoid_print
-      print('[TaskDetail] autosave falhou: $e');
+      print('[TaskDetailPersistence] autosave falhou: $e');
+    }
+
+    if (dueDate != null && dueTime != null) {
+      await NotificationService().cancelTaskNotification(taskId);
+      await NotificationService().scheduleTaskNotification(
+        taskId,
+        title,
+        dueDate,
+        time: horaStr,
+      );
+    } else {
+      await NotificationService().cancelTaskNotification(taskId);
     }
   }
 
@@ -180,11 +239,16 @@ class TaskDetailPersistence {
       }
     }
 
-    if (dueDate != null) {
-      NotificationService().cancelTaskNotification(taskId);
-      NotificationService().scheduleTaskNotification(taskId, title.trim(), dueDate);
+    if (dueDate != null && dueTime != null) {
+      await NotificationService().cancelTaskNotification(taskId);
+      await NotificationService().scheduleTaskNotification(
+        taskId,
+        title.trim(),
+        dueDate,
+        time: _horaString(dueTime),
+      );
     } else {
-      NotificationService().cancelTaskNotification(taskId);
+      await NotificationService().cancelTaskNotification(taskId);
     }
 
     return taskId;

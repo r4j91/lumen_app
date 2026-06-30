@@ -18,6 +18,7 @@ class TaskDatePickerSheet extends StatefulWidget {
   final TimeOfDay? initialTime;
   final Recurrence? initialRecurrence;
   final bool inDialog;
+  final bool showRecurrence;
   // BUG-DATE-OLD: antes, a única forma de propagar a seleção era o valor de
   // retorno de Navigator.pop() ao confirmar (_confirm()). Tap fora do sheet
   // (barrier dismiss) ou swipe-down fecham o ModalBottomSheet internamente
@@ -33,6 +34,7 @@ class TaskDatePickerSheet extends StatefulWidget {
     this.initialTime,
     this.initialRecurrence,
     this.inDialog = false,
+    this.showRecurrence = true,
     this.onChanged,
   });
 
@@ -547,6 +549,7 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
               curve: Curves.easeOutCubic,
               child: _timeExpanded ? _buildInlineTimePicker() : const SizedBox.shrink(),
             ),
+            if (widget.showRecurrence) ...[
             // COLORS-OLD: const Divider(height: 1, indent: 54, color: Color(0xFF2C2D33))
             Divider(height: 1, indent: 54, color: AppColors.surfaceVariant),
             InkWell(
@@ -565,6 +568,7 @@ class _TaskDatePickerSheetState extends State<TaskDatePickerSheet> {
                 ),
               ),
             ),
+            ],
           ],
         ),
       ),

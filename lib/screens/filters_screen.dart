@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
+import '../services/haptic_service.dart';
 import '../services/project_repository.dart';
 import '../services/task_repository.dart';
 import '../services/task_sync.dart';
@@ -7,13 +8,13 @@ import '../services/supabase_client.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
-import '../widgets/app_sheet.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/pressable.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/swipeable_task_tile.dart';
 import '../widgets/task_tile.dart';
 import 'task_detail_sheet.dart';
+import 'project_detail_screen.dart';
 import '../widgets/load_error_view.dart';
 import '../widgets/task_list_scaffold.dart';
 import '../widgets/screen_header.dart';
@@ -299,6 +300,7 @@ class FiltersScreenState extends State<FiltersScreen> {
                               hugeIcon: HugeIcons.strokeRoundedAlert01,
                               label: 'Atrasadas',
                               count: _overdueCount,
+                              colored: true,
                               color: AppColors.priorityHigh,
                               onTap: () => _loadFilter(_FilterView.overdue),
                             ),
@@ -306,10 +308,9 @@ class FiltersScreenState extends State<FiltersScreen> {
                           SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: _StatCard(
-                              hugeIcon: HugeIcons.strokeRoundedCalendar01,
+                              hugeIcon: HugeIcons.strokeRoundedCalendar02,
                               label: 'Hoje',
                               count: _todayCount,
-                              color: AppColors.accent,
                               onTap: () => _loadFilter(_FilterView.today),
                             ),
                           ),
@@ -323,17 +324,15 @@ class FiltersScreenState extends State<FiltersScreen> {
                               hugeIcon: HugeIcons.strokeRoundedCalendar03,
                               label: 'Próximos 7 dias',
                               count: _weekCount,
-                              color: AppColors.accent,
                               onTap: () => _loadFilter(_FilterView.week),
                             ),
                           ),
                           SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: _StatCard(
-                              hugeIcon: HugeIcons.strokeRoundedTaskDone01,
+                              hugeIcon: HugeIcons.strokeRoundedTick01,
                               label: 'Concluídas hoje',
                               count: _completedCount,
-                              color: AppColors.accent,
                               onTap: () => _loadFilter(_FilterView.completed),
                             ),
                           ),
@@ -344,23 +343,44 @@ class FiltersScreenState extends State<FiltersScreen> {
                 ),
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 28)),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
 
-        // ── Projects section ─────────────────────────────────────────────────
+        // ── Projects section (mesmo padrão visual da Home) ─────────────────
         if (!_loading) ...[
           SliverToBoxAdapter(
-            child: AppSectionLabel(
-              'PROJETOS',
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md),
+                AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.sm,
+              ),
+              child: Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.textTertiary.withValues(alpha: 0.15),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm,
+              ),
+              child: Text(
+                'PROJETOS',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                  color: AppColors.textSecondary,
+                ),
+              ),
             ),
           ),
           if (_projects.isEmpty)
             SliverToBoxAdapter(
               child: EmptyState(
-                hugeIcon: HugeIcons.strokeRoundedFolderOpen,
+                hugeIcon: HugeIcons.strokeRoundedFolder01,
                 title: 'Nenhum projeto',
-                subtitle: 'Crie um projeto para ver o progresso aqui',
+                subtitle: 'Organize suas tarefas por contexto',
               ),
             )
           else
@@ -370,6 +390,7 @@ class FiltersScreenState extends State<FiltersScreen> {
                 childCount: _projects.length,
               ),
             ),
+          const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
         ],
 
       ],
@@ -504,91 +525,110 @@ class _StatCard extends StatelessWidget {
   final List<List<dynamic>> hugeIcon;
   final String label;
   final int count;
+  final bool colored;
   final Color color;
   final VoidCallback onTap;
 
-  const _StatCard({
+  _StatCard({
     required this.hugeIcon,
     required this.label,
     required this.count,
-    required this.color,
+    this.colored = false,
+    Color? color,
     required this.onTap,
-  });
+  }) : color = color ?? AppColors.accent;
 
   @override
   Widget build(BuildContext context) {
     final countLabel = count == 1 ? '1 tarefa' : '$count tarefas';
+    final hasCount = count > 0;
+    final iconColor = colored ? color : AppColors.textPrimary;
+    final iconBg = colored
+        ? color.withValues(alpha: 0.14)
+        : AppColors.surfaceVariant.withValues(alpha: 0.45);
+
     return Semantics(
       button: true,
       label: '$label, $countLabel',
       child: Pressable(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-            color: count > 0 ? color.withValues(alpha: 0.2) : Colors.transparent,
-            width: 1,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md + 2),
+          decoration: BoxDecoration(
+            color: colored && hasCount
+                ? color.withValues(alpha: 0.07)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: colored && hasCount
+                  ? color.withValues(alpha: 0.22)
+                  : AppColors.textTertiary.withValues(alpha: 0.1),
+              width: 1,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: HugeIcon(icon: hugeIcon, size: 17, color: color),
-                ),
-                const Spacer(),
-                if (count > 0)
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
+                      color: iconBg,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      '$count',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: color,
+                    child: Center(
+                      child: HugeIcon(icon: hugeIcon, size: 20, color: iconColor),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (hasCount)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colored
+                            ? color.withValues(alpha: 0.16)
+                            : AppColors.textTertiary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: colored ? color : AppColors.textTertiary,
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                ],
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              count == 0
-                  ? 'Nenhuma'
-                  : '$count ${count == 1 ? 'tarefa' : 'tarefas'}',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: AppColors.textSecondary,
+              const SizedBox(height: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              Text(
+                hasCount ? countLabel : 'Nenhuma',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -600,85 +640,93 @@ class _ProjectStatRow extends StatelessWidget {
   final _ProjectStat project;
   const _ProjectStatRow({required this.project});
 
+  static final _countStyle = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textTertiary,
+  );
+
   @override
   Widget build(BuildContext context) {
     final color = project.color;
+    final done = project.total - project.pending;
+    final progress =
+        project.total == 0 ? 0.0 : done / project.total;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
-      child: Container(
-        height: 64,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.cardSm,
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 14),
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.surfaceVariant.withValues(alpha: 0.45),
-                border: Border.all(color: color.withValues(alpha: 0.75), width: 2),
+    return Semantics(
+      button: true,
+      label:
+          'Projeto ${project.name}, ${project.pending} pendentes de ${project.total}',
+      child: Pressable(
+        onTap: () {
+          HapticService().selectionClick();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProjectDetailScreen(
+                projectId: project.id,
+                projectName: project.name,
               ),
-              child: Center(
-                child: HugeIcon(
-                  icon: ProjectIcons.resolve(project.icone),
-                  size: 16,
-                  color: AppColors.textSecondary,
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: 13,
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: Center(
+                  child: HugeIcon(
+                    icon: ProjectIcons.resolve(project.icone),
+                    size: 22,
+                    color: color,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    project.name,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      project.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 5),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: project.total == 0
-                          ? 0
-                          : (project.total - project.pending) / project.total,
-                      minHeight: 4,
-                      backgroundColor: AppColors.surfaceVariant,
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '${project.pending}/${project.total}',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textTertiary,
+                    if (project.total > 0) ...[
+                      const SizedBox(height: 7),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 3,
+                          backgroundColor:
+                              AppColors.textTertiary.withValues(alpha: 0.12),
+                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
-          ],
+              Text('${project.pending}', style: _countStyle),
+              const SizedBox(width: AppSpacing.sm),
+              HugeIcon(
+                icon: HugeIcons.strokeRoundedArrowRight01,
+                size: 16,
+                color: AppColors.textTertiary.withValues(alpha: 0.7),
+              ),
+            ],
+          ),
         ),
       ),
     );

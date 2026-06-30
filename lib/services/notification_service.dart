@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+
+import 'supabase_client.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -18,8 +21,6 @@ class NotificationService {
   static const _prefChannelMigrated = 'notifications_channel_migrated_v2';
   static const _channelName = 'Tarefas';
   static const _prefEnabled = 'notifications_enabled';
-  static const _prefDefaultHour = 'notifications_default_hour';
-  static const _prefDefaultMinute = 'notifications_default_minute';
   static const _prefDailySummary = 'notifications_daily_summary';
 
   // ── Inicialização ──────────────────────────────────────────────────────────
@@ -64,20 +65,57 @@ class NotificationService {
   // ── Permissão ──────────────────────────────────────────────────────────────
 
   Future<bool> requestPermission() async {
-    final granted = await _plugin
-            .resolvePlatformSpecificImplementation<
-                fln.IOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(alert: true, badge: true, sound: true) ??
-        false;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefEnabled, granted);
-    return granted;
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        fln.IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      final granted = await ios.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefEnabled, granted ?? false);
+      return granted ?? false;
+    }
+
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        fln.AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      final granted = await android.requestNotificationsPermission();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefEnabled, granted ?? false);
+      return granted ?? false;
+    }
+
+    return false;
   }
 
+  Future<bool> _hasSystemPermission() async {
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        fln.IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      final settings = await ios.checkPermissions();
+      return settings?.isAlertEnabled ?? false;
+    }
+
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        fln.AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.areNotificationsEnabled() ?? true;
+    }
+
+    return true;
+  }
+
+  /// Preferência do usuário no app + permissão do sistema.
   Future<bool> get isEnabled async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_prefEnabled) ?? false;
+    final userWants = prefs.getBool(_prefEnabled) ?? false;
+    if (!userWants) return false;
+    return _hasSystemPermission();
   }
+
+  Future<bool> loadEnabledState() async => isEnabled;
 
   Future<void> setEnabled(bool value) async {
     final prefs = await SharedPreferences.getInstance();
@@ -87,20 +125,6 @@ class NotificationService {
 
   // ── Configurações ──────────────────────────────────────────────────────────
 
-  Future<({int hour, int minute})> get defaultTime async {
-    final prefs = await SharedPreferences.getInstance();
-    return (
-      hour: prefs.getInt(_prefDefaultHour) ?? 9,
-      minute: prefs.getInt(_prefDefaultMinute) ?? 0,
-    );
-  }
-
-  Future<void> setDefaultTime(int hour, int minute) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_prefDefaultHour, hour);
-    await prefs.setInt(_prefDefaultMinute, minute);
-  }
-
   Future<bool> get dailySummaryEnabled async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_prefDailySummary) ?? false;
@@ -109,33 +133,50 @@ class NotificationService {
   Future<void> setDailySummaryEnabled(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefDailySummary, value);
+    if (value) {
+      await _scheduleDailySummaryIfNeeded();
+    } else {
+      await _plugin.cancel(99999);
+    }
   }
 
   // ── Agendamento ────────────────────────────────────────────────────────────
 
   Future<void> scheduleTaskNotification(
-      String id, String title, DateTime dueDate) async {
+    String id,
+    String title,
+    DateTime dueDate, {
+    String? time,
+  }) async {
     if (!await isEnabled) return;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
     final diff = due.difference(today).inDays;
-    if (diff < 0) return; // já vencida, não notificar
+    if (diff < 0) return;
 
-    final time = await defaultTime;
+    final resolved = _resolveScheduleTime(time, dueDate);
+    if (resolved == null) return;
+
     final scheduled = tz.TZDateTime(
       tz.local,
-      dueDate.year, dueDate.month, dueDate.day,
-      time.hour, time.minute,
+      dueDate.year,
+      dueDate.month,
+      dueDate.day,
+      resolved.hour,
+      resolved.minute,
     );
     if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
 
+    final timeLabel =
+        '${resolved.hour.toString().padLeft(2, '0')}:${resolved.minute.toString().padLeft(2, '0')}';
+
     final body = diff == 0
-        ? 'Vence hoje'
+        ? 'Hoje às $timeLabel'
         : diff == 1
-            ? 'Vence amanhã'
-            : 'Vence em $diff dias';
+            ? 'Amanhã às $timeLabel'
+            : 'Vence em $diff dias às $timeLabel';
 
     await _plugin.zonedSchedule(
       _notifId(id),
@@ -149,17 +190,22 @@ class NotificationService {
     );
   }
 
+  /// Lembrete em horário específico (ex.: 15 min antes do vencimento).
   Future<void> scheduleTaskReminder(
-      String id, String title, DateTime reminderTime) async {
+    String id,
+    String title,
+    DateTime reminderTime, {
+    String body = 'Lembrete de tarefa',
+  }) async {
     if (!await isEnabled) return;
 
     final scheduled = tz.TZDateTime.from(reminderTime, tz.local);
     if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
 
     await _plugin.zonedSchedule(
-      _notifId(id),
+      _reminderNotifId(id),
       title,
-      'Lembrete de tarefa',
+      body,
       scheduled,
       _details(),
       uiLocalNotificationDateInterpretation:
@@ -173,7 +219,8 @@ class NotificationService {
     if (!await dailySummaryEnabled) return;
 
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 8, 0);
+    var scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, 8, 0);
     if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
@@ -193,8 +240,51 @@ class NotificationService {
     );
   }
 
+  /// Re-agenda todas as tarefas pendentes com data (ex.: ao abrir o app).
+  Future<void> rescheduleAllPending() async {
+    if (!await isEnabled) return;
+
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      final now = DateTime.now();
+      final todayStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      final rows = await supabase
+          .from('tasks')
+          .select('id, titulo, data_vencimento, hora')
+          .eq('user_id', userId)
+          .eq('concluida', false)
+          .gte('data_vencimento', todayStr);
+
+      await cancelAllNotifications();
+
+      for (final row in rows) {
+        final id = row['id'].toString();
+        final title = row['titulo'] as String? ?? '';
+        final due = _parseDueDate(row['data_vencimento']);
+        if (due == null) continue;
+        final hora = row['hora'] as String?;
+        if (hora == null && !_dueDateHasTime(due)) continue;
+        await scheduleTaskNotification(
+          id,
+          title,
+          due,
+          time: hora,
+        );
+      }
+
+      await _scheduleDailySummaryIfNeeded();
+    } catch (e, st) {
+      debugPrint('NotificationService.rescheduleAllPending failed: $e\n$st');
+    }
+  }
+
   Future<void> cancelTaskNotification(String id) async {
     await _plugin.cancel(_notifId(id));
+    await _plugin.cancel(_reminderNotifId(id));
   }
 
   Future<void> cancelAllNotifications() async {
@@ -203,11 +293,64 @@ class NotificationService {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
+  ({int hour, int minute})? _resolveScheduleTime(
+    String? time,
+    DateTime dueDate,
+  ) {
+    if (time != null && time.contains(':')) {
+      final parts = time.split(':');
+      final h = int.tryParse(parts[0]);
+      final m = int.tryParse(parts.length > 1 ? parts[1] : '0');
+      if (h != null && m != null) return (hour: h, minute: m);
+    }
+
+    if (_dueDateHasTime(dueDate)) {
+      return (hour: dueDate.hour, minute: dueDate.minute);
+    }
+
+    return null;
+  }
+
+  bool _dueDateHasTime(DateTime dueDate) =>
+      dueDate.hour != 0 || dueDate.minute != 0;
+
+  DateTime? _parseDueDate(dynamic raw) {
+    if (raw == null) return null;
+    final str = raw.toString().trim();
+    if (str.isEmpty) return null;
+    return DateTime.tryParse(str);
+  }
+
+  Future<void> _scheduleDailySummaryIfNeeded() async {
+    if (!await dailySummaryEnabled) return;
+
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      final now = DateTime.now();
+      final todayStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final rows = await supabase
+          .from('tasks')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('concluida', false)
+          .eq('data_vencimento', todayStr);
+      await scheduleDailySummary((rows as List).length);
+    } catch (e) {
+      debugPrint('NotificationService daily summary failed: $e');
+    }
+  }
+
   int _notifId(String taskId) {
     final hex = taskId.replaceAll('-', '');
     final s = hex.length >= 8 ? hex.substring(hex.length - 8) : hex;
     return int.parse(s, radix: 16) & 0x7FFFFFFF;
   }
+
+  /// ID separado para lembretes (não colide com a notificação de vencimento).
+  int _reminderNotifId(String taskId) => _notifId(taskId) ^ 0x40000000;
 
   fln.NotificationDetails _details() => const fln.NotificationDetails(
         iOS: fln.DarwinNotificationDetails(

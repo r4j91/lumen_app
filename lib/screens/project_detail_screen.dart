@@ -23,6 +23,7 @@ import '../widgets/task_detail/subtask_item.dart';
 import '../widgets/task_detail/sheets/subtask_detail_sheet.dart';
 import '../widgets/task_detail/sheets/task_labels_picker_sheet.dart' show LabelOption;
 import '../widgets/project_detail/project_list_models.dart';
+import '../widgets/done_circle.dart';
 import '../widgets/task_tile.dart';
 import 'quick_add_task_sheet.dart';
 import 'task_detail_sheet.dart';
@@ -893,7 +894,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     updatedSubtasks[subIndex] = updatedSub;
     final updatedTask = task.copyWith(subtasks: updatedSubtasks);
     setState(() => _tasks[taskIndex] = updatedTask);
-    HapticService().selectionClick();
+    if (newDone) {
+      HapticService().taskCompleted();
+    } else {
+      HapticService().selectionClick();
+    }
     if (sub.id != null) {
       supabase.from('subtasks').update({'concluida': newDone}).eq('id', sub.id!).catchError((_) {
         if (mounted) setState(() => _tasks[taskIndex] = task);
@@ -975,21 +980,16 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             Pressable(
               behavior: HitTestBehavior.opaque,
               onTap: () => _toggleSubtaskDone(task, sub),
-              child: Container(
-                width: 18,
-                height: 18,
-                margin: EdgeInsets.only(top: centerTitle ? 0 : 1, right: 8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: sub.done ? AppColors.success : priColor.withValues(alpha: 0.08),
-                  border: Border.all(
-                    color: sub.done ? AppColors.success : priColor,
-                    width: 2,
-                  ),
+              child: Padding(
+                padding: EdgeInsets.only(top: centerTitle ? 0 : 1, right: 8),
+                child: DoneCircle(
+                  done: sub.done,
+                  size: 18,
+                  borderWidth: 2,
+                  tickSize: 10,
+                  ringColor: priColor,
+                  ringFillAlpha: 0.08,
                 ),
-                child: sub.done
-                    ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 10, color: Colors.white)
-                    : null,
               ),
             ),
             Expanded(
@@ -997,14 +997,23 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    sub.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.textPrimary.withValues(alpha: 0.85),
-                      decoration: sub.done ? TextDecoration.lineThrough : TextDecoration.none,
+                      fontWeight: FontWeight.normal,
+                      color: sub.done
+                          ? AppColors.textTertiary
+                          : AppColors.textPrimary.withValues(alpha: 0.88),
+                      decoration:
+                          sub.done ? TextDecoration.lineThrough : TextDecoration.none,
+                      decorationColor: AppColors.textTertiary,
+                    ),
+                    child: Text(
+                      sub.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (hasDesc)

@@ -5,6 +5,7 @@ import '../../../models/task.dart' show Priority; // ADICIONADO_REDESIGN_SUBTASK
 import '../../../services/haptic_service.dart';
 import '../../../services/subtask_repository.dart';
 import '../../../theme/app_colors.dart';
+import '../../../theme/app_layout.dart';
 import '../../anchored_select_menu.dart';
 import '../../popover_style.dart';
 import '../subtask_item.dart';
@@ -21,11 +22,31 @@ Future<void> showSubtaskDetailSheet({
   required SubtaskItem item,
   required List<LabelOption> labels,
   required VoidCallback onChanged,
-  // ADICIONADO_REDESIGN_SUBTASK: título da tarefa pai, usado no breadcrumb.
-  // Opcional — quando nulo (ex.: aberto de dentro do próprio TaskDetailSheet,
-  // onde o contexto da tarefa pai já é óbvio), o breadcrumb não é exibido.
   String? parentTaskTitle,
 }) {
+  final isDesktop = AppLayout.isDesktop(context);
+  if (isDesktop) {
+    return showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      builder: (_) => Align(
+        alignment: const Alignment(0, -0.1),
+        child: Material(
+          color: Colors.transparent,
+          child: SizedBox(
+            width: 480,
+            child: SubtaskDetailSheet(
+              item: item,
+              labels: labels,
+              onChanged: onChanged,
+              parentTaskTitle: parentTaskTitle,
+              asDialog: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
   return showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
@@ -41,8 +62,8 @@ class SubtaskDetailSheet extends StatefulWidget {
   final SubtaskItem item;
   final List<LabelOption> labels;
   final VoidCallback onChanged;
-  // ADICIONADO_REDESIGN_SUBTASK
   final String? parentTaskTitle;
+  final bool asDialog;
 
   const SubtaskDetailSheet({
     super.key,
@@ -50,6 +71,7 @@ class SubtaskDetailSheet extends StatefulWidget {
     required this.labels,
     required this.onChanged,
     this.parentTaskTitle,
+    this.asDialog = false,
   });
 
   @override
@@ -103,8 +125,20 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
     _descFocused = _descFocusNode.hasFocus;
   }
 
+  Future<void> _flushPendingText() async {
+    _titleDebounce?.cancel();
+    _descDebounce?.cancel();
+    _valorDebounce?.cancel();
+    final title = widget.item.ctrl.text.trim();
+    if (title.isNotEmpty) {
+      await _persistField('titulo', title);
+    }
+    await _persistField('descricao', widget.item.descCtrl.text.trim());
+  }
+
   @override
   void dispose() {
+    unawaited(_flushPendingText());
     widget.item.ctrl.removeListener(_onTitleText);
     widget.item.descCtrl.removeListener(_onDescText);
     _descFocusNode.removeListener(_onDescFocusChanged);
@@ -278,6 +312,8 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
       builder: (_) => TaskDatePickerSheet(
         initialDate: _dueDate,
         initialTime: _dueTime,
+        showRecurrence: false,
+        inDialog: widget.asDialog,
         // BUG-DATE-SUBTASK: o picker confirma via onChanged + pop() sem valor;
         // depender do retorno do await deixava result sempre null.
         onChanged: (r) {
@@ -303,7 +339,14 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
   }
 
   Future<void> _showLabelsMenu() async {
-    if (widget.labels.isEmpty) return;
+    if (widget.labels.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Nenhuma etiqueta disponível'),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
     final result = await showAnchoredMultiSelectMenu(
       context: context,
       anchorKey: _labelsChipKey,
@@ -355,12 +398,15 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
   Widget _buildLabelChips() {
     final selected = widget.labels.where((l) => _labelIds.contains(l.id)).toList();
     if (selected.isEmpty) return const SizedBox.shrink();
+    final extra = selected.length - 2;
     return Wrap(
       spacing: 6,
       runSpacing: 4,
-      children: selected
-          .map((l) => TagChip(label: l.name, color: l.color))
-          .toList(),
+      children: [
+        ...selected.take(2).map((l) => TagChip(label: l.name, color: l.color)),
+        if (extra > 0)
+          Text('+$extra', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+      ],
     );
   }
 
@@ -372,10 +418,12 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
       // outside the barrier, system back — so an edit is never left
       // applied in only one of those paths.
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) _applyAndPersist();
+        if (didPop) unawaited(_flushPendingText());
       },
       child: LiquidPanel(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: widget.asDialog
+            ? BorderRadius.circular(20)
+            : const BorderRadius.vertical(top: Radius.circular(20)),
         child: Padding(
           padding: EdgeInsets.only(bottom: view.padding.bottom / view.devicePixelRatio + 12),
           // CORRIGIDO_TECLADO_SUBTASK: Column era fixo (sem scroll), então
@@ -590,6 +638,17 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
                     children: [
                       // CORRIGIDO_VISUAL_A: Divider adicionado após cada
                       // MetaRow preenchido.
+                      if (_dueDate != null) ...[
+                        MetaRow(
+                          hugeIcon: HugeIcons.strokeRoundedCalendar01,
+                          onTap: () => _showDateSheet(),
+                          child: Text(
+                            _formatDate(_dueDate!, _dueTime),
+                            style: TextStyle(fontSize: 13, color: _dueDateColor),
+                          ),
+                        ),
+                        Divider(height: 1, thickness: 1, color: AppColors.textTertiary.withValues(alpha: 0.12)),
+                      ],
                       if (_priority != null) ...[
                         MetaRow(
                           key: _priorityChipKey,
@@ -601,17 +660,6 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
                               SubtaskPriority.medium => Priority.medium,
                               SubtaskPriority.low => Priority.low,
                             },
-                          ),
-                        ),
-                        Divider(height: 1, thickness: 1, color: AppColors.textTertiary.withValues(alpha: 0.12)),
-                      ],
-                      if (_dueDate != null) ...[
-                        MetaRow(
-                          hugeIcon: HugeIcons.strokeRoundedCalendar01,
-                          onTap: () => _showDateSheet(),
-                          child: Text(
-                            _formatDate(_dueDate!, _dueTime),
-                            style: TextStyle(fontSize: 13, color: _dueDateColor),
                           ),
                         ),
                         Divider(height: 1, thickness: 1, color: AppColors.textTertiary.withValues(alpha: 0.12)),
@@ -639,7 +687,7 @@ class _SubtaskDetailSheetState extends State<SubtaskDetailSheet> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                   child: SizedBox(
-                    height: 36,
+                    height: 44,
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       children: [

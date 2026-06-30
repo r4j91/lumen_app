@@ -25,6 +25,7 @@ Future<void> showQuickAddTaskSheet(BuildContext context,
   if (isDesktop) {
     await showDialog<void>(
       context: context,
+      barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (_) => Align(
         alignment: const Alignment(0, -0.15),
@@ -43,17 +44,25 @@ Future<void> showQuickAddTaskSheet(BuildContext context,
       ),
     );
   } else {
+    final isTablet = AppLayout.isTablet(context);
+    final screenW = MediaQuery.sizeOf(context).width;
+    final hPad = isTablet
+        ? (screenW - AppLayout.tabletContentMaxWidth(screenW)) / 2
+        : 0.0;
     await showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
-      isScrollControlled: true,   // allows sheet to resize above keyboard
+      isScrollControlled: true,
       isDismissible: true,
       enableDrag: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => QuickAddTaskSheet(
-        onSaved: onSaved,
-        initialProjectId: initialProjectId,
-        initialSectionId: initialSectionId,
+      builder: (_) => Padding(
+        padding: EdgeInsets.symmetric(horizontal: hPad),
+        child: QuickAddTaskSheet(
+          onSaved: onSaved,
+          initialProjectId: initialProjectId,
+          initialSectionId: initialSectionId,
+        ),
       ),
     );
   }
@@ -116,6 +125,8 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
   List<_QProject> _projects = [];
   List<_QLabel>   _labels   = [];
   bool   _saving            = false;
+  bool   _metaLoading       = true;
+  String? _metaError;
   double _viewPaddingBottom = 0;
 
   // Anchor keys for popovers
@@ -159,6 +170,8 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
       final lRows = await supabase.from('labels').select('id, nome, cor').order('nome');
       if (!mounted) return;
       setState(() {
+        _metaLoading = false;
+        _metaError = null;
         _projects = (pRows as List)
             .map((r) => _QProject(r['id'].toString(), r['nome'] as String,
                 color: _parseColor(r['cor'] as String?)))
@@ -188,7 +201,14 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
           });
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _metaLoading = false;
+          _metaError = 'Não foi possível carregar projetos';
+        });
+      }
+    }
   }
 
   Future<void> _loadSectionsForProject(String projectId) async {
@@ -241,6 +261,9 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
     }
 
     final userId = supabase.auth.currentUser?.id;
+    final horaStr = _dueTime != null
+        ? '${_dueTime!.hour.toString().padLeft(2, '0')}:${_dueTime!.minute.toString().padLeft(2, '0')}'
+        : null;
     final inserted = await supabase
         .from('tasks')
         .insert({
@@ -250,6 +273,7 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
           'project_id': _project?.id,
           'section_id': _selectedSectionId,
           'data_vencimento': dueDateStr,
+          if (horaStr != null) 'hora': horaStr,
           if (userId != null) 'user_id': userId,
         })
         .select('id')
@@ -263,9 +287,13 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
       ));
     }
 
-    if (_dueDate != null) {
-      unawaited(NotificationService()
-          .scheduleTaskNotification(taskId, title, _dueDate!));
+    if (_dueDate != null && _dueTime != null) {
+      unawaited(NotificationService().scheduleTaskNotification(
+        taskId,
+        title,
+        _dueDate!,
+        time: horaStr,
+      ));
     }
 
     return taskId;
@@ -278,15 +306,13 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
     setState(() => _saving = true);
 
     final messenger = ScaffoldMessenger.of(context);
-    final saveFuture = _persistTask();
-
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    widget.onSaved?.call();
-
     try {
-      await saveFuture;
+      await _persistTask();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onSaved?.call();
     } catch (e) {
+      if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(SnackBar(
         content: Text('Erro ao salvar: $e'),
         behavior: SnackBarBehavior.floating,
@@ -340,28 +366,59 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
 
   Future<void> _showDateSheet(BuildContext ctx) async {
     _lastDateResult = null;
-    await showModalBottomSheet<void>(
-      context: ctx,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => TaskDatePickerSheet(
-        initialDate: _dueDate,
-        initialTime: _dueTime,
-        initialRecurrence: null,
-        onChanged: (r) {
-          _lastDateResult = r;
-          if (mounted) {
-            setState(() {
-              _dueDate = r.date;
-              _dueTime = r.time;
-            });
-          }
-        },
-      ),
-    );
+    if (widget.asDialog) {
+      await showDialog<void>(
+        context: ctx,
+        barrierColor: Colors.black.withValues(alpha: 0.2),
+        builder: (dialogCtx) => Center(
+          child: Material(
+            color: Colors.transparent,
+            child: SizedBox(
+              width: 360,
+              child: TaskDatePickerSheet(
+                initialDate: _dueDate,
+                initialTime: _dueTime,
+                initialRecurrence: null,
+                showRecurrence: false,
+                inDialog: true,
+                onChanged: (r) {
+                  _lastDateResult = r;
+                  if (mounted) {
+                    setState(() {
+                      _dueDate = r.date;
+                      _dueTime = r.time;
+                    });
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      await showModalBottomSheet<void>(
+        context: ctx,
+        useRootNavigator: true,
+        isScrollControlled: true,
+        isDismissible: true,
+        enableDrag: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => TaskDatePickerSheet(
+          initialDate: _dueDate,
+          initialTime: _dueTime,
+          initialRecurrence: null,
+          onChanged: (r) {
+            _lastDateResult = r;
+            if (mounted) {
+              setState(() {
+                _dueDate = r.date;
+                _dueTime = r.time;
+              });
+            }
+          },
+        ),
+      );
+    }
     if (!mounted) return;
     final effective = _lastDateResult;
     if (effective != null) {
@@ -400,7 +457,14 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
   }
 
   Future<void> _showLabelsMenu(BuildContext ctx) async {
-    if (_labels.isEmpty) return;
+    if (_labels.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Nenhuma etiqueta disponível'),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
     final result = await showAnchoredMultiSelectMenu(
       context: context,
       anchorKey: _labelsKey,
@@ -595,6 +659,59 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
 
   // ── Build ─────────────────────────────────────────────────────────────────────
 
+  bool get _projectOnSecondLine =>
+      _project != null && _selectedSectionName != null;
+
+  Widget _buildSendButton(bool hasTitle) {
+    return GestureDetector(
+      onTap: hasTitle && !_saving ? _save : null,
+      child: Semantics(
+        button: true,
+        enabled: hasTitle && !_saving,
+        label: 'Salvar tarefa',
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: _kSendButtonWidth,
+          height: _kFooterPillHeight,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: hasTitle
+                ? AppColors.accent
+                : AppColors.accent.withValues(alpha: 0.28),
+            borderRadius: BorderRadius.circular(_pillRadius),
+          ),
+          child: _saving
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.background,
+                  ),
+                )
+              : HugeIcon(
+                  icon: HugeIcons.strokeRoundedArrowUp01,
+                  size: 18,
+                  color: hasTitle
+                      ? AppColors.background
+                      : AppColors.background.withValues(alpha: 0.45),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProjectPill() {
+    return _ProjectPill(
+      key: _projectKey,
+      name: _projectPillLabel,
+      dotColor:
+          _project?.color ?? AppColors.textPrimary.withValues(alpha: 0.28),
+      active: _project != null,
+      onTap: _metaError == null ? () => _showProjectMenu(context) : () {},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.asDialog) return _buildDialog();
@@ -602,10 +719,13 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
   }
 
   Widget _buildDialog() {
-    // Desktop: full rounded corners, no drag handle.
-    return _LiquidPanel(
-      borderRadius: BorderRadius.circular(20),
-      child: _buildContent(isDialog: true),
+    final kbH = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: kbH),
+      child: _LiquidPanel(
+        borderRadius: BorderRadius.circular(20),
+        child: _buildContent(isDialog: true),
+      ),
     );
   }
 
@@ -756,111 +876,92 @@ class _QuickAddTaskSheetState extends State<QuickAddTaskSheet> {
           color: AppColors.textTertiary.withValues(alpha: 0.15),
         ),
 
-        // ── B.9 Problem 2: 2-line footer ─────────────────────────────────────
-        // Line 1: Etiqueta + Data + Prioridade (scrollable horizontal)
-        // Line 2: Projeto/Inbox (left)  +  Botão enviar (right)
-        // OLD (1 row with all 4 pills + send button) — commented for revert:
-        // Padding(padding: const EdgeInsets.fromLTRB(0, 9, 14, 9), child: Row(children: [
-        //   Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, padding: ...,
-        //     child: Row(children: [label, date, priority, project]))),
-        //   SizedBox(10), sendButton ])),
-
-        // Line 1 — scrollable pills: Label · Date · Priority
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.only(left: 14, top: 9, right: 14),
-          child: Row(
-            children: [
-              _QuickPill(
-                key: _labelsKey,
-                hugeIcon: HugeIcons.strokeRoundedTag01,
-                active: _labelIds.isNotEmpty,
-                activeColor: _labelPillColor,
-                activeLabel: _labelPillName,
-                badge: _labelIds.length > 1 ? '${_labelIds.length}' : null,
-                onTap: () => _showLabelsMenu(context),
-              ),
-              const SizedBox(width: 7),
-              _QuickPill(
-                key: _dateKey,
-                hugeIcon: HugeIcons.strokeRoundedCalendar01,
-                active: _dueDate != null,
-                activeColor: _datePillColor,
-                activeLabel: _dueDate != null ? _datePillLabel : null,
-                onTap: () => _showDateSheet(context),
-              ),
-              const SizedBox(width: 7),
-              _QuickPill(
-                key: _priorityKey,
-                hugeIcon: HugeIcons.strokeRoundedFlag01,
-                active: _priority != null,
-                activeColor: _priorityColor,
-                activeLabel: _priority != null ? _priorityLabel : null,
-                subtleBg: true,
-                onTap: () => _showPriorityMenu(context),
-              ),
-              const SizedBox(width: 7),
-              // CORRIGIDO_ETAPA3B_PARCELAS: gerador de parcelas — salva a
-              // tarefa (se houver título) e abre o InstallmentGeneratorSheet
-              // com o taskId real.
-              _QuickPill(
-                hugeIcon: HugeIcons.strokeRoundedMoney01,
-                active: false,
-                activeColor: AppColors.accent,
-                subtleBg: true,
-                onTap: hasTitle && !_saving ? _openInstallmentGenerator : () {},
-              ),
-            ],
-          ),
-        ),
-
-        // Line 2 — Projeto (left) + Salvar (right)
+        // Linha 1: pills de ação + projeto/inbox (quando sem seção) + salvar fixo à direita.
+        // Linha 2: só quando projeto E seção estão definidos (rótulo longo).
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 6, 14, 9),
+          padding: EdgeInsets.fromLTRB(
+            14,
+            9,
+            14,
+            _projectOnSecondLine ? 6 : 9,
+          ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _ProjectPill(
-                key: _projectKey,
-                name: _projectPillLabel,
-                dotColor: _project?.color ??
-                    AppColors.textPrimary.withValues(alpha: 0.28),
-                active: _project != null,
-                onTap: () => _showProjectMenu(context),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: hasTitle && !_saving ? _save : null,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: _kSendButtonWidth,
-                  height: _kFooterPillHeight,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: hasTitle
-                        ? AppColors.accent
-                        : AppColors.accent.withValues(alpha: 0.28),
-                    borderRadius: BorderRadius.circular(_pillRadius),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  child: Row(
+                    children: [
+                      _QuickPill(
+                        key: _labelsKey,
+                        hugeIcon: HugeIcons.strokeRoundedTag01,
+                        active: _labelIds.isNotEmpty,
+                        activeColor: _labelPillColor,
+                        activeLabel: _labelPillName,
+                        badge: _labelIds.length > 1 ? '${_labelIds.length}' : null,
+                        onTap: () => _showLabelsMenu(context),
+                      ),
+                      const SizedBox(width: 7),
+                      _QuickPill(
+                        key: _dateKey,
+                        hugeIcon: HugeIcons.strokeRoundedCalendar01,
+                        active: _dueDate != null,
+                        activeColor: _datePillColor,
+                        activeLabel: _dueDate != null ? _datePillLabel : null,
+                        onTap: () => _showDateSheet(context),
+                      ),
+                      const SizedBox(width: 7),
+                      _QuickPill(
+                        key: _priorityKey,
+                        hugeIcon: HugeIcons.strokeRoundedFlag01,
+                        active: _priority != null,
+                        activeColor: _priorityColor,
+                        activeLabel: _priority != null ? _priorityLabel : null,
+                        subtleBg: true,
+                        onTap: () => _showPriorityMenu(context),
+                      ),
+                      const SizedBox(width: 7),
+                      _QuickPill(
+                        hugeIcon: HugeIcons.strokeRoundedMoney01,
+                        active: false,
+                        activeColor: AppColors.accent,
+                        subtleBg: true,
+                        onTap: hasTitle && !_saving ? _openInstallmentGenerator : () {},
+                      ),
+                      if (!_projectOnSecondLine) ...[
+                        const SizedBox(width: 7),
+                        _buildProjectPill(),
+                      ],
+                    ],
                   ),
-                  child: _saving
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.background,
-                          ),
-                        )
-                      : HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01,
-                          size: 18,
-                          color: hasTitle
-                              ? AppColors.background
-                              : AppColors.background.withValues(alpha: 0.45),
-                        ),
                 ),
               ),
+              const SizedBox(width: 10),
+              _buildSendButton(hasTitle),
             ],
           ),
         ),
+
+        if (_projectOnSecondLine)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 9),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _buildProjectPill(),
+            ),
+          ),
+
+        if (_metaError != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+            child: Text(
+              _metaError!,
+              style: TextStyle(fontSize: 12, color: AppColors.priorityHigh),
+              textAlign: TextAlign.center,
+            ),
+          ),
 
         // ── Safe area bottom (sheet only) ─────────────────────────────────────
         // When the keyboard is open, the home-indicator safe area sits behind it

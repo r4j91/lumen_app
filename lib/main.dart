@@ -216,6 +216,7 @@ class _RootScreenState extends State<RootScreen> {
     super.initState();
     ThemeProvider.instance.addListener(_onThemeChanged);
     _lazyScreen(0);
+    unawaited(NotificationService().rescheduleAllPending());
   }
 
   @override

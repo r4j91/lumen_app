@@ -152,7 +152,7 @@ class _SwipeableTaskTileState extends State<SwipeableTaskTile>
                 widget.onCompleted?.call();
                 _showSnack(context, '"${widget.task.title}" concluída');
               },
-              backgroundColor: AppColors.success,
+              backgroundColor: AppColors.dateDueToday,
               foregroundColor: AppColors.onColoredFill,
               borderRadius:
                   const BorderRadius.horizontal(left: Radius.circular(12)),

@@ -12,6 +12,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_motion.dart';
 import 'pressable.dart';
+import 'done_circle.dart';
 import 'package:hugeicons/hugeicons.dart';
 // ADICIONADO_ETAPA3B
 import 'task_detail/subtask_item.dart';
@@ -477,7 +478,7 @@ class _TaskTileState extends State<TaskTile> with TickerProviderStateMixin {
                 HugeIcon(icon: HugeIcons.strokeRoundedClock01,
                     size: 11, color: AppColors.textTertiary),
                 const SizedBox(width: 2),
-                Text(task.time!,
+                Text(formatTaskTimeDisplay(task.time!),
                     style: TextStyle(
                         fontSize: 11, color: AppColors.textTertiary)),
               ],
@@ -704,7 +705,12 @@ class SubtaskList extends StatelessWidget {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            HapticService().selectionClick();
+            final willComplete = !done;
+            if (willComplete) {
+              HapticService().taskCompleted();
+            } else {
+              HapticService().selectionClick();
+            }
             onToggle(index);
           },
           child: Padding(
@@ -736,40 +742,19 @@ class SubtaskList extends StatelessWidget {
 
   // ADICIONADO_ETAPA3B
   Widget _buildSubtaskCircle(Subtask sub, bool done) {
-    // COLORS-OLD: Color(0xFFDC4C3E)/Color(0xFFEB8909)/Color(0xFF246FE0)
     final priColor = switch (sub.priority) {
       SubtaskPriority.high => AppColors.subtaskPriorityHigh,
       SubtaskPriority.medium => AppColors.subtaskPriorityMedium,
       SubtaskPriority.low => AppColors.subtaskPriorityLow,
       null => AppColors.textTertiary,
     };
-    // M1-OLD: antes, done==true mantinha a cor da prioridade da subtask.
-    // return Container(
-    //   width: 18,
-    //   height: 18,
-    //   decoration: BoxDecoration(
-    //     shape: BoxShape.circle,
-    //     color: priColor.withValues(alpha: 0.08),
-    //     border: Border.all(color: priColor, width: 2),
-    //   ),
-    //   child: done
-    //       ? HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 11, color: priColor.withValues(alpha: 0.8))
-    //       : null,
-    // );
-    // COLORS-OLD: const doneColor = Color(0xFF22C55E);
-    const doneColor = AppColors.success;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      width: 18,
-      height: 18,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: done ? doneColor : priColor.withValues(alpha: 0.08),
-        border: Border.all(color: done ? doneColor : priColor, width: 2),
-      ),
-      child: done
-          ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 10, color: Colors.white)
-          : null,
+    return DoneCircle(
+      done: done,
+      size: 18,
+      borderWidth: 2,
+      tickSize: 10,
+      ringColor: priColor,
+      ringFillAlpha: 0.08,
     );
   }
 
@@ -867,33 +852,13 @@ class PriorityDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // M1-OLD: antes, done==true preenchia com a cor da prioridade.
-    // return Container(
-    //   width: 20,
-    //   height: 20,
-    //   decoration: BoxDecoration(
-    //     shape: BoxShape.circle,
-    //     color: done ? _color : _color.withValues(alpha: 0.12),
-    //     border: Border.all(color: _color, width: 2.5),
-    //   ),
-    //   child: done
-    //       ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 12, color: Colors.white)
-    //       : null,
-    // );
-    // COLORS-OLD: const doneColor = Color(0xFF22C55E);
-    const doneColor = AppColors.success;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      width: 20,
-      height: 20,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: done ? doneColor : _color.withValues(alpha: 0.12),
-        border: Border.all(color: done ? doneColor : _color, width: 2.5),
-      ),
-      child: done
-          ? const HugeIcon(icon: HugeIcons.strokeRoundedTick01, size: 13, color: Colors.white)
-          : null,
+    return DoneCircle(
+      done: done,
+      size: 20,
+      borderWidth: 2.5,
+      tickSize: 13,
+      ringColor: _color,
+      ringFillAlpha: 0.12,
     );
   }
 }
@@ -994,6 +959,15 @@ const kPtMonthsShort = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
   'jul', 'ago', 'set', 'out', 'nov', 'dez',
 ];
+
+/// Exibe hora na lista sem segundos (ex.: "23:05:00" → "23:05").
+String formatTaskTimeDisplay(String time) {
+  final parts = time.split(':');
+  if (parts.length >= 2) {
+    return '${parts[0]}:${parts[1]}';
+  }
+  return time;
+}
 
 ({Color color, String label}) dueDateStyle(DateTime dueDate) {
   final now = DateTime.now();

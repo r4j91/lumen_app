@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
@@ -21,8 +20,6 @@ class _NotificationsSettingsContentState
   final _svc = NotificationService();
 
   bool _enabled = false;
-  int _hour = 9;
-  int _minute = 0;
   bool _dailySummary = false;
   bool _loading = true;
 
@@ -33,14 +30,11 @@ class _NotificationsSettingsContentState
   }
 
   Future<void> _load() async {
-    final enabled = await _svc.isEnabled;
-    final time = await _svc.defaultTime;
+    final enabled = await _svc.loadEnabledState();
     final daily = await _svc.dailySummaryEnabled;
     if (mounted) {
       setState(() {
         _enabled = enabled;
-        _hour = time.hour;
-        _minute = time.minute;
         _dailySummary = daily;
         _loading = false;
       });
@@ -50,88 +44,15 @@ class _NotificationsSettingsContentState
   Future<void> _toggleEnabled(bool value) async {
     if (value) {
       final granted = await _svc.requestPermission();
+      if (granted) {
+        await _svc.setEnabled(true);
+        await _svc.rescheduleAllPending();
+      }
       if (mounted) setState(() => _enabled = granted);
     } else {
       await _svc.setEnabled(false);
       if (mounted) setState(() => _enabled = false);
     }
-  }
-
-  Future<void> _pickTime() async {
-    await showCupertinoModalPopup<void>(
-      context: context,
-      builder: (ctx) {
-        var tempH = _hour;
-        var tempM = _minute;
-        return Container(
-          height: 280,
-          color: AppColors.surface,
-          child: Column(children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              CupertinoButton(
-                child: Text('Cancelar',
-                    style: TextStyle(color: AppColors.textSecondary)),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-              CupertinoButton(
-                child: Text('OK',
-                    style: TextStyle(
-                        color: AppColors.accent, fontWeight: FontWeight.w600)),
-                onPressed: () async {
-                  await _svc.setDefaultTime(tempH, tempM);
-                  if (mounted) {
-                    setState(() {
-                      _hour = tempH;
-                      _minute = tempM;
-                    });
-                  }
-                  if (ctx.mounted) Navigator.pop(ctx);
-                },
-              ),
-            ]),
-            Expanded(
-              child: Row(children: [
-                Expanded(
-                  child: CupertinoPicker(
-                    scrollController:
-                        FixedExtentScrollController(initialItem: _hour),
-                    itemExtent: 44,
-                    onSelectedItemChanged: (v) => tempH = v,
-                    children: List.generate(
-                      24,
-                      (i) => Center(
-                        child: Text(
-                          '${i.toString().padLeft(2, '0')}h',
-                          style: TextStyle(
-                              color: AppColors.textPrimary, fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: CupertinoPicker(
-                    scrollController: FixedExtentScrollController(
-                        initialItem: _minute ~/ 15),
-                    itemExtent: 44,
-                    onSelectedItemChanged: (v) => tempM = v * 15,
-                    children: [0, 15, 30, 45]
-                        .map((m) => Center(
-                              child: Text(
-                                '${m.toString().padLeft(2, '0')}min',
-                                style: TextStyle(
-                                    color: AppColors.textPrimary, fontSize: 16),
-                              ),
-                            ))
-                        .toList(),
-                  ),
-                ),
-              ]),
-            ),
-          ]),
-        );
-      },
-    );
   }
 
   @override
@@ -169,31 +90,6 @@ class _NotificationsSettingsContentState
             ),
           ]),
           if (_enabled) ...[
-            const SizedBox(height: AppSpacing.lg),
-            _Section(children: [
-              _Row(
-                hugeIcon: HugeIcons.strokeRoundedClock01,
-                label: 'Horário padrão',
-                trailing: GestureDetector(
-                  onTap: _pickTime,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
-                    child: Text(
-                      '${_hour.toString().padLeft(2, '0')}:${_minute.toString().padLeft(2, '0')}',
-                      style: TextStyle(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15),
-                    ),
-                  ),
-                ),
-              ),
-            ]),
             const SizedBox(height: AppSpacing.md),
             _Section(children: [
               _Row(
@@ -212,7 +108,7 @@ class _NotificationsSettingsContentState
             ]),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'As notificações são agendadas automaticamente quando você salva uma tarefa com data de vencimento.',
+              'Você recebe um alerta na hora definida na tarefa. Tarefas só com data, sem hora, não disparam notificação.',
               style: TextStyle(
                   color: AppColors.textTertiary,
                   fontSize: 13,

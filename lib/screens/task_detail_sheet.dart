@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import '../models/section.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
 import '../services/haptic_service.dart';
+import '../services/subtask_repository.dart';
 import '../services/task_detail_persistence.dart';
 import '../services/section_repository.dart';
 import '../services/supabase_client.dart';
@@ -21,11 +23,13 @@ import '../widgets/task_detail/sheets/task_project_picker_sheet.dart';
 import '../widgets/task_detail/task_detail_comments_section.dart';
 import '../widgets/task_detail/task_detail_description_field.dart';
 import '../widgets/task_detail/task_detail_subtasks_list.dart';
+import '../widgets/task_detail/sheets/subtask_detail_sheet.dart';
 import '../widgets/task_detail/subtask_item.dart';
 import '../widgets/task_detail/task_detail_widgets.dart';
 import 'quick_add_task_sheet.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../widgets/pressable.dart';
+import '../widgets/done_circle.dart';
 
 // Lightweight structs just for this sheet
 class _Project {
@@ -53,9 +57,6 @@ Future<void> showTaskDetailSheet(BuildContext context, Task task,
       builder: (_) => _TaskDetailSheet(task: task, onSaved: onSaved, asDialog: true),
     );
   } else {
-    // ADICIONADO_TAP_FORA_FECHA: GlobalKey permite que o backdrop (criado
-    // em _SheetPageRoute.buildTransitions, fora da árvore do State) acione
-    // o mesmo fechamento "salva e fecha" usado pelo botão X.
     final contentKey = GlobalKey<_TaskDetailSheetState>();
     await Navigator.of(context, rootNavigator: true).push(
       _SheetPageRoute(
@@ -225,7 +226,12 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   Recurrence? _recurrence;
   bool _saving = false;
   bool _subtasksExpanded = false;
+  bool _taskDone = false;
   bool _popping = false;
+
+  Timer? _titleDebounce;
+  Timer? _descDebounce;
+  static const _autosaveDebounce = Duration(milliseconds: 600);
 
   double _keyboardHeight = 0;
   double _viewPaddingBottom = 0;
@@ -270,8 +276,62 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     if (_isNew || widget.task?.id == null) return;
     await TaskDetailPersistence.autosaveDueDate(
       taskId: widget.task!.id,
+      title: _titleCtrl.text.trim().isEmpty
+          ? (widget.task?.title ?? '')
+          : _titleCtrl.text.trim(),
       dueDate: _dueDate,
       dueTime: _dueTime,
+      recurrence: _recurrence,
+    );
+  }
+
+  Future<void> _autosaveProject() async {
+    if (_isNew || widget.task?.id == null) return;
+    await TaskDetailPersistence.autosaveProject(
+      taskId: widget.task!.id,
+      projectId: _project?.id,
+      sectionId: _sectionId,
+    );
+  }
+
+  void _scheduleTitleAutosave() {
+    if (_isNew) return;
+    _titleDebounce?.cancel();
+    _titleDebounce = Timer(_autosaveDebounce, () async {
+      if (widget.task?.id == null) return;
+      final title = _titleCtrl.text.trim();
+      if (title.isEmpty) return;
+      await TaskDetailPersistence.autosaveTitle(
+        taskId: widget.task!.id,
+        title: title,
+      );
+    });
+  }
+
+  void _scheduleDescAutosave() {
+    if (_isNew) return;
+    _descDebounce?.cancel();
+    _descDebounce = Timer(_autosaveDebounce, () async {
+      if (widget.task?.id == null) return;
+      await TaskDetailPersistence.autosaveDescription(
+        taskId: widget.task!.id,
+        description: _descCtrl.text,
+      );
+    });
+  }
+
+  Future<void> _flushPendingAutosave() async {
+    _titleDebounce?.cancel();
+    _descDebounce?.cancel();
+    if (_isNew || widget.task?.id == null) return;
+    final taskId = widget.task!.id;
+    final title = _titleCtrl.text.trim();
+    if (title.isNotEmpty) {
+      await TaskDetailPersistence.autosaveTitle(taskId: taskId, title: title);
+    }
+    await TaskDetailPersistence.autosaveDescription(
+      taskId: taskId,
+      description: _descCtrl.text,
     );
   }
 
@@ -342,6 +402,12 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
       );
     }).toList();
     _recurrence = widget.task?.recurrence;
+    _taskDone = widget.task?.done ?? false;
+    _subtasksExpanded = _subtasks.isNotEmpty;
+    if (!_isNew) {
+      _titleCtrl.addListener(_scheduleTitleAutosave);
+      _descCtrl.addListener(_scheduleDescAutosave);
+    }
     if (!widget.asDialog) _draggableCtrl.addListener(_onDragChange);
     _loadMeta();
     // COMMENT-LOAD: carregar comentários ao abrir
@@ -377,13 +443,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     if (!_draggableCtrl.isAttached || _popping) return;
     if (_draggableCtrl.size <= 0.51 && mounted) {
       _draggableCtrl.removeListener(_onDragChange);
-      if (_titleCtrl.text.trim().isNotEmpty && !_saving) {
-        _save();
-      } else {
-        _popping = true;
-        Navigator.of(context).pop();
-        widget.onSaved?.call(); // ADICIONADO_REFRESH_FECHAMENTO
-      }
+      unawaited(closeAndPersist());
     }
   }
 
@@ -399,9 +459,11 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   // Os campos individuais (prioridade/data/etiquetas/projeto-seção) já têm
   // autosave próprio e imediato — fechar aqui só precisa popar e avisar a
   // tela anterior para recarregar (dados já estão no banco).
-  void closeAndPersist() {
+  Future<void> closeAndPersist() async {
     if (_popping) return;
     _popping = true;
+    await _flushPendingAutosave();
+    if (!mounted) return;
     Navigator.of(context).pop();
     widget.onSaved?.call();
   }
@@ -415,6 +477,12 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _removePopover();
+    _titleDebounce?.cancel();
+    _descDebounce?.cancel();
+    if (!_isNew) {
+      _titleCtrl.removeListener(_scheduleTitleAutosave);
+      _descCtrl.removeListener(_scheduleDescAutosave);
+    }
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _commentCtrl.dispose();
@@ -427,23 +495,53 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   }
 
   Future<void> _toggleSubtaskDone(SubtaskItem s) async {
-    setState(() => s.done = !s.done);
+    final next = !s.done;
+    setState(() => s.done = next);
+    if (next) {
+      HapticService().taskCompleted();
+    } else {
+      HapticService().selectionClick();
+    }
     if (widget.task == null) return;
-    final idx = _subtasks.indexOf(s);
     try {
-      final rows = await supabase
-          .from('subtasks')
-          .select('id')
-          .eq('task_id', widget.task!.id)
-          .order('ordem');
-      if (idx >= 0 && idx < rows.length) {
-        await supabase
+      if (s.id != null) {
+        await const SubtaskRepository().toggleSubtaskDone(s.id!, s.done);
+      } else {
+        final idx = _subtasks.indexOf(s);
+        final rows = await supabase
             .from('subtasks')
-            .update({'concluida': s.done})
-            .eq('id', rows[idx]['id']);
+            .select('id')
+            .eq('task_id', widget.task!.id)
+            .order('ordem');
+        if (idx >= 0 && idx < rows.length) {
+          await supabase
+              .from('subtasks')
+              .update({'concluida': s.done})
+              .eq('id', rows[idx]['id']);
+        }
       }
       widget.onSaved?.call();
     } catch (_) {}
+  }
+
+  Future<void> _toggleTaskDone() async {
+    if (_isNew || widget.task?.id == null) return;
+    final next = !_taskDone;
+    setState(() => _taskDone = next);
+    if (next) {
+      HapticService().taskCompleted();
+    } else {
+      HapticService().selectionClick();
+    }
+    try {
+      await supabase
+          .from('tasks')
+          .update({'concluida': next})
+          .eq('id', widget.task!.id);
+      widget.onSaved?.call();
+    } catch (_) {
+      if (mounted) setState(() => _taskDone = !next);
+    }
   }
 
   void _addSubtask() {
@@ -453,7 +551,16 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
       order: _subtasks.length,
     );
     setState(() => _subtasks.add(item));
-    WidgetsBinding.instance.addPostFrameCallback((_) => item.focus.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      HapticService().lightImpact();
+      showSubtaskDetailSheet(
+        context: context,
+        item: item,
+        labels: _labels.map((l) => LabelOption(l.id, l.name, l.color)).toList(),
+        onChanged: () => setState(() {}),
+      );
+    });
   }
 
   Future<void> _loadMeta() async {
@@ -480,7 +587,13 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
           .eq('task_id', widget.task!.id);
       currentLabelIds = (tlRows as List).map((r) => r['label_id'].toString()).toSet();
       try {
-        currentProject = projects.firstWhere((p) => p.name == widget.task!.project);
+        if (widget.task!.projectId != null) {
+          currentProject =
+              projects.firstWhere((p) => p.id == widget.task!.projectId);
+        } else {
+          currentProject =
+              projects.firstWhere((p) => p.name == widget.task!.project);
+        }
       } catch (_) {}
 
       // Sync ids/done state without replacing controllers — avoids races
@@ -773,50 +886,49 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
 
   @override
   Widget build(BuildContext context) {
-    if (widget.asDialog) return _buildDesktopDialogV2(context);
-    return Padding(
-      padding: EdgeInsets.only(bottom: _keyboardHeight),
-      child: DraggableScrollableSheet(
-        controller: _draggableCtrl,
-        initialChildSize: _isNew ? 0.92 : 0.72,
-        minChildSize: 0.45,
-        maxChildSize: 0.92,
-        snap: true,
-        snapSizes: _isNew ? const [0.92] : const [0.55, 0.92],
-        builder: (ctx, scrollCtrl) {
-          // OLD: solid Material background — replaced with Liquid Glass to match
-          // the QuickAddTaskSheet treatment (_LiquidPanel / PopoverBorderPainter
-          // tokens). Geometry (top-only rounded corners) is unchanged.
-          // return Material(
-          //   color: AppColors.surface,
-          //   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          //   child: Column(
-          //     children: [
-          //       _buildSheetHeader(),
-          //       Expanded(child: _buildBody(scrollCtrl)),
-          //       _buildFooter(keyboardHeight: _keyboardHeight),
-          //     ],
-          //   ),
-          // );
-          return LiquidPanel(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            // Material(transparency) restores the Material ancestor that the
-            // OLD solid Material(color: surface) used to provide — required by
-            // TextField/InkWell descendants (header title field, notes field,
-            // comment field). Fully transparent so it doesn't cover the blur.
-            child: Material(
-              type: MaterialType.transparency,
-              child: Column(
-                children: [
-                  _buildSheetHeader(),
-                  Expanded(child: _buildBody(scrollCtrl)),
-                  _buildFooter(keyboardHeight: _keyboardHeight),
-                ],
-              ),
+    final isTablet = AppLayout.isTablet(context);
+    final screenW = MediaQuery.sizeOf(context).width;
+    final tabletPad = isTablet
+        ? (screenW - AppLayout.tabletContentMaxWidth(screenW)) / 2
+        : 0.0;
+
+    final body = widget.asDialog
+        ? _buildDesktopDialogV2(context)
+        : Padding(
+            padding: EdgeInsets.fromLTRB(tabletPad, 0, tabletPad, _keyboardHeight),
+            child: DraggableScrollableSheet(
+              controller: _draggableCtrl,
+              initialChildSize: _isNew ? 0.92 : 0.72,
+              minChildSize: 0.45,
+              maxChildSize: 0.92,
+              snap: true,
+              snapSizes: _isNew ? const [0.92] : const [0.55, 0.92],
+              builder: (ctx, scrollCtrl) {
+                return LiquidPanel(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Column(
+                      children: [
+                        _buildSheetHeader(),
+                        Expanded(child: _buildBody(scrollCtrl)),
+                        _buildFooter(keyboardHeight: _keyboardHeight),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           );
-        },
-      ),
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        unawaited(closeAndPersist());
+      },
+      child: body,
     );
   }
 
@@ -825,7 +937,16 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   // ── Desktop dialog V2: layout 2 colunas ─────────────────────────────────────
   // Esquerda (flex): título + notas  |  Direita (220px): painel de atributos
   Widget _buildDesktopDialogV2(BuildContext context) {
-    final hasTitle = _titleCtrl.text.trim().isNotEmpty;
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _titleCtrl,
+      builder: (context, _, __) {
+        final hasTitle = _titleCtrl.text.trim().isNotEmpty;
+        return _buildDesktopDialogV2Content(context, hasTitle);
+      },
+    );
+  }
+
+  Widget _buildDesktopDialogV2Content(BuildContext context, bool hasTitle) {
     return Center(
       child: Material(
         color: Colors.transparent,
@@ -944,6 +1065,15 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                                     ),
                                     maxLines: null,
                                   ),
+                                  if (!_isNew) ...[
+                                    const SizedBox(height: 16),
+                                    _buildSubtasksSection(),
+                                    const SizedBox(height: 12),
+                                    TaskDetailCommentsList(
+                                      loading: _loadingComments,
+                                      comments: _comments,
+                                    ),
+                                  ],
                                   const SizedBox(height: 18),
                                 ],
                               ),
@@ -963,6 +1093,12 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                         ],
                       ),
                     ),
+                    if (!_isNew)
+                      TaskDetailCommentFooter(
+                        commentCtrl: _commentCtrl,
+                        bottomPad: 8,
+                        onSend: _sendComment,
+                      ),
                     // ── Footer ──────────────────────────────────────────
                     _buildDesktopFooterBarV2(context, hasTitle),
                   ],
@@ -1014,7 +1150,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
             key: _projectChipKey,
             hugeIcon: HugeIcons.strokeRoundedFolder01,
             label: 'Projeto',
-            value: _project?.name ?? 'Sem projeto',
+            value: _projectLabel,
             active: _project != null,
             onTap: () => _showProjectMenu(context),
           ),
@@ -1074,11 +1210,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
         children: [
           const Spacer(),
           TextButton(
-            onPressed: () {
-              if (_popping) return;
-              _popping = true;
-              Navigator.of(context).pop();
-            },
+            onPressed: () => unawaited(closeAndPersist()),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.textSecondary,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1432,8 +1564,29 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TaskPriorityCircle(priority: _priority),
-              const SizedBox(width: 12),
+              if (!_isNew)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Pressable(
+                    onTap: _toggleTaskDone,
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: DoneCircle(
+                          done: _taskDone,
+                          size: 22,
+                          borderWidth: 2,
+                          tickSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_isNew) ...[
+                TaskPriorityCircle(priority: _priority),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: TextField(
                   controller: _titleCtrl,
@@ -1637,7 +1790,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                     child: SizedBox(
-                      height: 36,
+                      height: 44,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
                         children: [
@@ -2205,7 +2358,14 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
   }
 
   Future<void> _showLabelsMenu(BuildContext btnCtx) async {
-    if (_labels.isEmpty) return;
+    if (_labels.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Nenhuma etiqueta disponível'),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
     final result = await showAnchoredMultiSelectMenu(
       context: context,
       anchorKey: _labelsChipKey,
@@ -2324,6 +2484,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
         _sectionId = null;
         _sectionName = null;
       });
+      await _autosaveProject();
       return;
     }
 
@@ -2343,6 +2504,8 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
     if (!mounted) return;
     if (_availableSections.isNotEmpty) {
       await _showSectionMenu(btnCtx);
+    } else {
+      await _autosaveProject();
     }
   }
 
@@ -2392,6 +2555,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
         } catch (_) {}
       }
     });
+    await _autosaveProject();
   }
 
   // ── Anchored picker helper (desktop) ─────────────────────────────────────────
@@ -2467,7 +2631,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
           subtasks: _subtasks,
           labels: _labels.map((l) => LabelOption(l.id, l.name, l.color)).toList(),
           onToggle: _toggleSubtaskDone,
-          onReorder: (oldIndex, newIndex) {
+          onReorder: (oldIndex, newIndex) async {
             setState(() {
               final item = _subtasks.removeAt(oldIndex);
               _subtasks.insert(newIndex, item);
@@ -2475,9 +2639,21 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> with WidgetsBindingO
                 _subtasks[i].order = i;
               }
             });
+            if (_isNew) return;
+            final items = _subtasks
+                .where((s) => s.id != null)
+                .map((s) => (id: s.id!, order: s.order))
+                .toList();
+            if (items.isNotEmpty) {
+              await const SubtaskRepository().reorderSubtasks(items);
+            }
           },
-          onRemove: (i) {
-            _subtasks[i].dispose();
+          onRemove: (i) async {
+            final item = _subtasks[i];
+            if (item.id != null) {
+              await const SubtaskRepository().deleteSubtask(item.id!);
+            }
+            item.dispose();
             setState(() => _subtasks.removeAt(i));
           },
         ),
