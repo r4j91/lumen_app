@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_layout.dart';
 import 'header_liquid_pill.dart';
 
 class UserPill extends StatelessWidget {
@@ -43,8 +44,8 @@ class UserPill extends StatelessWidget {
     return HeaderLiquidPill(
       padding: EdgeInsets.zero,
       child: SizedBox(
-        width: showName ? null : 44,
-        height: 44,
+        width: showName ? null : AppLayout.headerControlSize,
+        height: showName ? null : AppLayout.headerControlSize,
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: showName ? 12 : 0,
@@ -55,8 +56,8 @@ class UserPill extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: showName ? 28 : 32,
-                height: showName ? 28 : 32,
+                width: showName ? 28 : AppLayout.headerAvatarSize,
+                height: showName ? 28 : AppLayout.headerAvatarSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.accent.withValues(alpha: 0.18),
@@ -70,7 +71,7 @@ class UserPill extends StatelessWidget {
                     child: Text(
                       _initials,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: showName ? 13 : 15,
                         fontWeight: FontWeight.w800,
                         color: AppColors.accent,
                       ),

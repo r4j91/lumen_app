@@ -348,7 +348,7 @@ class HomeScreenState extends State<HomeScreen> {
                 ),
                 Container(
                   width: 1,
-                  height: 20,
+                  height: AppLayout.headerControlSize * 0.5,
                   color: AppColors.textTertiary.withValues(alpha: 0.2),
                 ),
                 _HeaderIconButton(
@@ -736,7 +736,7 @@ class HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Ícone do header — 44×44 hit area, pill total alinhado ao avatar (44px).
+/// Ícone do header — alinhado ao avatar compacto ([AppLayout.headerControlSize]).
 class _HeaderIconButton extends StatelessWidget {
   final String label;
   final List<List<dynamic>> icon;
@@ -756,12 +756,12 @@ class _HeaderIconButton extends StatelessWidget {
       child: Pressable(
         onTap: onTap,
         child: SizedBox(
-          width: 44,
-          height: 44,
+          width: AppLayout.headerControlSize,
+          height: AppLayout.headerControlSize,
           child: Center(
             child: HugeIcon(
               icon: icon,
-              size: 22,
+              size: AppLayout.headerIconSize,
               color: AppColors.textSecondary,
             ),
           ),

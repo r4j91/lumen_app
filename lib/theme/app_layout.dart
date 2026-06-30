@@ -26,6 +26,11 @@ class AppLayout {
   static const double fabGap = 10;
   static const double fabSideMargin = 14;
 
+  /// Home header — avatar compacto e botões sino/config (mesma altura).
+  static const double headerControlSize = 48;
+  static const double headerAvatarSize = 40;
+  static const double headerIconSize = 24;
+
   /// Inset inferior seguro (home indicator) — sempre [viewPadding.bottom].
   static double bottomSafeInset(BuildContext context) =>
       MediaQuery.viewPaddingOf(context).bottom;
